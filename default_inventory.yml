@@ -1,0 +1,16 @@
+# ---------------------------------------------------------
+# Default inventory for the CiviDash CIVITAS/CORE Add-on
+# ---------------------------------------------------------
+
+---
+all:
+  children:
+    controller:
+      vars:
+        inv_addons:
+          cividash:
+            enable: true
+            enable_ingress: true
+            ns_create: true
+            ns_name: "{{ ENVIRONMENT }}-cividash-stack"
+            ns_kubeconfig: "{{ kubeconfig_file }}"

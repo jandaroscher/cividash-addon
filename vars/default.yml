@@ -1,0 +1,5 @@
+---
+addon_dir: "addons/cividash_addon/"
+
+# Default Keycloak client ID for CIVIDASH Civitas Dashboard
+IDM_CLIENT_CIVIDASH: "cividash"

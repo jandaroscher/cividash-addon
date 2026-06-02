@@ -1,0 +1,22 @@
+---
+- name: Set default facts for K8S
+  ansible.builtin.set_fact:
+    k8s_config: "{{ K8S_KUBECONFIG_PATH }}/{{ inv_addons.cividash.ns_kubeconfig }}"
+    k8s_context: "{{ inv_k8s.config.context }}"
+    k8s_namespace: "{{ inv_addons.cividash.ns_name }}"
+
+- name: "Create namespace {{ k8s_namespace }}"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    definition:
+      api_version: v1
+      kind: Namespace
+      metadata:
+        name: "{{ k8s_namespace }}"
+        labels:
+          name: "{{ k8s_namespace }}"
+  when: inv_addons.cividash.ns_create
+
+

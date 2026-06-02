@@ -1,0 +1,27 @@
+# -----------------------------------------------------------------------------
+# Software dependencies of the CiviDash CIVITAS/CORE add-on
+# -----------------------------------------------------------------------------
+# 
+# Image dependencies must appear as
+# - software.addon_cividash.some_component_name.registry
+# - software.addon_cividash.some_component_name.repository
+# - software.addon_cividash.some_component_name.tag
+# 
+# to support private registries, which is a platform core feature.
+# 
+# For more details, see https://docs.core.civitasconnect.digital/docs/Deployment/Private-Registry-Support
+# 
+# -----------------------------------------------------------------------------
+
+---
+software:
+  addon_cividash:
+    cividash:
+      helm_chart_name:
+      helm_release_name:
+      helm_repo_name:
+      helm_repo_url:
+      helm_chart_version:
+      registry:            # e.g. "docker.io"
+      repository:          # e.g. "cividash/cividash"
+      tag:                 # e.g. 1.0.0

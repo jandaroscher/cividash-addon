@@ -1,0 +1,10 @@
+---
+- name: Include CiviDash vars
+  include_vars:
+    dir: vars
+  tags: ["addons"]
+
+- name: Setup CiviDash
+  import_tasks: tasks/cividash.yml
+  when: inv_addons.cividash.enable
+  tags: ["addons", "addon_cividash"]
