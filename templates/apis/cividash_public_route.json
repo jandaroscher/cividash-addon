@@ -1,0 +1,20 @@
+{
+  "name": "cividash-web",
+  "desc": "CiviDash - OPEN host route (app handles its own auth; no APISIX openid-connect gate). Forwards / , /api/* , /admin , /filament , /docs to the cividash-web nginx upstream.",
+  "hosts": [
+    "{{ cividash_public_host }}"
+  ],
+  "uri": "/*",
+  "upstream_id": "{{ cividash_web_upstream_id }}",
+  "status": 1,
+  "plugins": {
+    "proxy-rewrite": {
+      "headers": {
+        "set": {
+          "X-Forwarded-Proto": "https",
+          "X-Forwarded-Host": "{{ cividash_public_host }}"
+        }
+      }
+    }
+  }
+}

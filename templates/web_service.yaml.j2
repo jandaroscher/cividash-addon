@@ -1,0 +1,18 @@
+{#
+  cividash-web Service: ClusterIP on :80. Ingress upstream target.
+#}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cividash-web
+  labels:
+    app.kubernetes.io/name: cividash-web
+    app.kubernetes.io/part-of: cividash
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cividash-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

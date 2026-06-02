@@ -1,0 +1,40 @@
+{#
+  Public Ingress: public_host -> Service cividash-web:80.
+  Mirrors the airflow / dez-real-addon ingress style:
+    - cert-manager cluster-issuer + tls-acme for automatic TLS
+    - ingressClassName from inv_k8s
+    - ssl-redirect driven by open_http_port
+
+  CONTRACT decision 2: this Ingress is OPEN. NO auth / openid-connect
+  annotations are placed here. The Laravel/Filament application enforces its
+  own authentication (Fortify + optional Keycloak Socialite SSO). Path "/"
+  (Prefix) covers /, /api/*, /admin and /filament alike.
+#}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cividash-public
+  labels:
+    app.kubernetes.io/name: cividash-web
+    app.kubernetes.io/part-of: cividash
+  annotations:
+    cert-manager.io/cluster-issuer: "{{ inv_k8s.cert_manager.issuer_name }}"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{ open_http_port | default('true') | lower }}"
+spec:
+  ingressClassName: "{{ inv_k8s.ingress_class }}"
+  tls:
+    - hosts:
+        - "{{ cividash_public_host }}"
+      secretName: "{{ cividash_public_host }}-tls"
+  rules:
+    - host: "{{ cividash_public_host }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cividash-web
+                port:
+                  number: 80

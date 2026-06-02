@@ -1,9 +1,27 @@
 ---
+# =============================================================================
+# CiviDash add-on — top-level orchestration
+# -----------------------------------------------------------------------------
+# Packages the CIVIDASH Laravel dashboard as a CIVITAS/CORE add-on.
+# Deploy via raw kubernetes.core.k8s manifests (NO Helm) + uri-based
+# Keycloak/APISIX admin-API calls, mirroring the airflow_addon pattern.
+#
+# This file is ONLY the orchestration: facts, asserts and ordered includes.
+# Each included file authors its own K8s objects (secrets, DB, migrate,
+# workloads, APISIX routes). Object names are FIXED for cross-file
+# consistency (cividash-db, cividash-fpm, cividash-web, cividash-queue, cividash-scheduler, ...).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# K8s connection facts (kubeconfig / context / namespace).
+# Namespace == inv_addons.cividash.ns_name. Reused by every included task.
+# -----------------------------------------------------------------------------
 - name: Set default facts for K8S
   ansible.builtin.set_fact:
     k8s_config: "{{ K8S_KUBECONFIG_PATH }}/{{ inv_addons.cividash.ns_kubeconfig }}"
     k8s_context: "{{ inv_k8s.config.context }}"
     k8s_namespace: "{{ inv_addons.cividash.ns_name }}"
+  tags: ["addons", "addon_cividash"]
 
 - name: "Create namespace {{ k8s_namespace }}"
   kubernetes.core.k8s:
@@ -18,5 +36,99 @@
         labels:
           name: "{{ k8s_namespace }}"
   when: inv_addons.cividash.ns_create
+  tags: ["addons", "addon_cividash"]
 
+# -----------------------------------------------------------------------------
+# Validate that the inventory supplies the keys every downstream stage needs.
+# Fail fast with a clear message rather than rendering broken manifests.
+# -----------------------------------------------------------------------------
+- name: "CiviDash: Validate required inventory keys"
+  ansible.builtin.assert:
+    that:
+      # ingress / routing
+      - inv_addons.cividash.public_host is defined
+      - inv_addons.cividash.public_host | length > 0
+      # Keycloak client for Socialite admin SSO; the NGSI-LD token comes from
+      # the shared api-access client, not this one
+      - inv_addons.cividash.oidc_client_id is defined
+      - inv_addons.cividash.oidc_client_id | length > 0
+      # MariaDB StatefulSet settings (R1: own DB, not a CORE-native convention)
+      - inv_addons.cividash.db is defined
+      - inv_addons.cividash.db.database is defined
+      - inv_addons.cividash.db.username is defined
+      - inv_addons.cividash.db.storage is defined
+      # S3 credentials (vaulted): rendered into cividash-app-secret as AWS_*.
+      - inv_addons.cividash.s3.access_key_id is defined
+      - inv_addons.cividash.s3.access_key_id | length > 0
+      - inv_addons.cividash.s3.secret_access_key is defined
+      - inv_addons.cividash.s3.secret_access_key | length > 0
+    fail_msg: >-
+      Missing required keys in inv_addons.cividash.
+      Expected: public_host, oidc_client_id, db.{database,username,storage},
+      and the vaulted s3.{access_key_id,secret_access_key}.
+      (DB password/root password are generated idempotently in tasks/secrets.yml.)
+    success_msg: "CiviDash: required inventory keys present."
+  tags: ["addons", "addon_cividash"]
 
+# -----------------------------------------------------------------------------
+# Resolve the prebuilt CIVIDASH container images (built by the CIVIDASH main repo).
+#   cividash_app -> php-fpm, full Laravel app (uid 82, alpine www-data)
+#   cividash_web -> nginx + baked public assets (fastcgi_pass cividash-fpm:9000)
+# Honour the platform private-registry override exactly like airflow:
+# inv_op_stack.private_registry.registry_full_url wins over the per-image
+# registry from software.addon_cividash.*.
+# -----------------------------------------------------------------------------
+- name: "CIVIDASH Civitas: Resolve container images"
+  ansible.builtin.set_fact:
+    cividash_app_image: >-
+      {{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_app.registry) }}/{{ software.addon_cividash.cividash_app.repository }}:{{ software.addon_cividash.cividash_app.tag }}
+    cividash_web_image: >-
+      {{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_web.registry) }}/{{ software.addon_cividash.cividash_web.repository }}:{{ software.addon_cividash.cividash_web.tag }}
+  tags: ["addons", "addon_cividash"]
+
+# -----------------------------------------------------------------------------
+# Deploy stages — ORDERED. Each file is authored by a sibling stage; here we
+# only include them. Render manifests inside each file via
+#   lookup('template', addon_dir + 'templates/<file>.yaml.j2') | from_yaml
+# -----------------------------------------------------------------------------
+
+# 1) Secrets: cividash-db-secret (DB creds + root pw, generated idempotently) and
+#    cividash-app-secret (APP_KEY generated idempotently + app env vars).
+- name: "CIVIDASH Civitas: Deploy secrets (DB + app base)"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/secrets.yml' }}"
+  tags: ["addons", "addon_cividash"]
+
+# 2) Database: MariaDB StatefulSet + headless Service, then wait-ready.
+#    R1: MariaDB is NOT a CORE-native convention (CORE is Postgres-only via
+#    the Zalando operator). Provided as a raw StatefulSet + PVC with no
+#    operator/backup integration — see the comment header in tasks/database.yml.
+- name: "CIVIDASH Civitas: Deploy MariaDB StatefulSet"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/database.yml' }}"
+  tags: ["addons", "addon_cividash"]
+
+# 3) Keycloak SSO: register the "cividash" client (Socialite admin SSO +
+#    client-credentials for the NGSI-LD machine token) and write its id/secret
+#    into cividash-oidc-secret. APISIX does NOT consume this client (see stage 6).
+- name: "CiviDash: Configure Keycloak SSO client"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/keycloak_sso.yml' }}"
+  tags: ["addons", "addon_cividash"]
+
+# 4) Migrate: run `php artisan migrate --force` as a Job and wait for it to
+#    complete before bringing up the workloads.
+- name: "CIVIDASH Civitas: Run database migrations"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/migrate.yml' }}"
+  tags: ["addons", "addon_cividash"]
+
+# 5) Workloads: fpm/web/queue/scheduler Deployments + Services, plus the
+#    public Ingress (gated on enable_ingress) inside the same file.
+- name: "CIVIDASH Civitas: Deploy workloads (fpm/web/queue/scheduler + services + ingress)"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/workloads.yml' }}"
+  tags: ["addons", "addon_cividash"]
+
+# 6) APISIX: OPEN routes only (R2). One route per public_host, uri /* ->
+#    cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
+#    app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
+- name: "CiviDash: Configure APISIX open routes"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/apisix.yml' }}"
+  when: inv_addons.cividash.enable_ingress | default(true)
+  tags: ["addons", "addon_cividash"]

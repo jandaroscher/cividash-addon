@@ -1,6 +1,9 @@
 # ---------------------------------------------------------
 # Default inventory for the CiviDash CIVITAS/CORE Add-on
 # ---------------------------------------------------------
+# Override any of these in your platform inventory. The add-on is activated
+# via the inv_addons.import hook documented in the README.
+# ---------------------------------------------------------
 
 ---
 all:
@@ -9,8 +12,51 @@ all:
       vars:
         inv_addons:
           cividash:
+            # --- lifecycle --------------------------------------------------
             enable: true
-            enable_ingress: true
             ns_create: true
             ns_name: "{{ ENVIRONMENT }}-cividash-stack"
-            ns_kubeconfig: "{{ kubeconfig_file }}"
+            ns_kubeconfig: "{{ kubeconfig_file | default('kubeconfig') }}"
+
+            # --- ingress / routing -----------------------------------------
+            # When true, the public Ingress is created AND the open APISIX
+            # gateway route is registered (tasks/apisix.yml).
+            enable_ingress: true
+            # Public hostname the dashboard (and its /admin, /api, /filament,
+            # /docs paths) is served on. One open APISIX route -> cividash-web.
+            public_host: "dashboard.{{ DOMAIN }}"
+            # Admin host for the Keycloak Socialite SSO callback. Defaults to
+            # the public host (admin lives under /admin on the same host).
+            admin_host: "dashboard.{{ DOMAIN }}"
+
+            # --- Keycloak ---------------------------------------------------
+            # Client used by the APP (not by APISIX): Socialite admin SSO
+            # (standard flow) + client-credentials for the NGSI-LD token.
+            oidc_client_id: "{{ IDM_CLIENT_CIVIDASH | default('cividash') }}"
+
+            # --- workload scaling ------------------------------------------
+            replicas:
+              web: 2
+              fpm: 2
+
+            # --- database (R1: MariaDB StatefulSet, NOT a CORE convention) ---
+            # CORE is Postgres-only via the Zalando operator. This MariaDB is a
+            # raw StatefulSet + PVC with no operator/backup integration. See the
+            # README "R1" note and the header in tasks/database.yml.
+            db:
+              database: "cividash"
+              username: "cividash"
+              storage: "5Gi"
+
+            # --- CIVITAS / NGSI-LD -----------------------------------------
+            # Base URL of the CORE context broker; the app appends /context/ngsi-ld.
+            civitas_api_url: "https://api.{{ DOMAIN }}"
+
+            # --- object storage (CORE RustFS / S3) for the public media disk -
+            s3:
+              endpoint: "https://s3.{{ DOMAIN }}"
+              bucket: "cividash"
+              public_url: "https://s3.{{ DOMAIN }}/cividash"
+              region: "us-east-1"
+              # access_key_id: ""   # REQUIRED, supply via vaulted inventory
+              # secret_access_key: ""  # REQUIRED, supply via vaulted inventory

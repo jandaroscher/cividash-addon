@@ -1,0 +1,25 @@
+# =============================================================================
+# Service: cividash-db — headless ClusterIP for the MariaDB StatefulSet
+# -----------------------------------------------------------------------------
+# clusterIP: None gives the StatefulSet a stable per-pod DNS name
+# (cividash-db-0.cividash-db.<ns>.svc.cluster.local). The app connects via the short
+# service name "cividash-db" on port 3306 (DB_HOST=cividash-db).
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: cividash-db
+  namespace: "{{ k8s_namespace }}"
+  labels:
+    app.kubernetes.io/name: cividash-db
+    app.kubernetes.io/part-of: cividash
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: cividash-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
