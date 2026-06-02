@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# Local kind smoke variables for the cividash-addon.
+#
+# These stub the CIVITAS/CORE platform inventory (inv_k8s / inv_op_stack /
+# software / inv_addons.cividash) just enough to deploy the add-on's
+# data-plane (MariaDB + the 4 app workloads + migrate Job) into a local kind
+# cluster. Keycloak/APISIX/Ingress are intentionally skipped by the smoke
+# playbook (they require a full CORE control plane).
+#
+# `civitas_gateway_ip` is injected from dev/run-smoke.sh (`-e`) and is the kind
+# docker-network gateway = the host address reachable from inside pods, where
+# the local bare Stellio broker publishes 8090.
+# =============================================================================
+
+inv_addons:
+  cividash:
+    ns_create: true
+    ns_name: cividash-smoke
+    ns_kubeconfig: config
+    public_host: dashboard.smoke.local
+    admin_host: admin.smoke.local
+    oidc_client_id: cividash
+    enable_ingress: false
+    # Local kind-loaded images are not in a registry -> never try to pull.
+    image_pull_policy: IfNotPresent
+    image_pull_secret: ""
+    replicas:
+      fpm: 1
+      web: 1
+    db:
+      database: cividash
+      username: cividash
+      storage: 1Gi
+    # The app_secret template appends "/context/ngsi-ld" (the CORE path). The
+    # local bare Stellio broker serves "/ngsi-ld/v1" instead, so run-smoke.sh
+    # overrides CIVITAS_API_URL for the actual sync test.
+    civitas_api_url: "http://{{ civitas_gateway_ip }}:8090"
+    # Dummy S3 creds: media is not exercised by the smoke (sync + /up don't
+    # touch object storage). Present only so the app-secret renders.
+    s3:
+      access_key_id: "smoke"
+      secret_access_key: "smoke-secret"
+      bucket: "cividash-media"
+      endpoint: "http://{{ civitas_gateway_ip }}:9000"
+      public_url: "http://localhost:9000/cividash-media"
+      region: "us-east-1"
+
+inv_k8s:
+  storage_class:
+    loc: "standard"            # kind's default local-path StorageClass
+  ingress_class: "nginx"
+  cert_manager:
+    issuer_name: "selfsigned"
+  config:
+    context: "kind-cividash-smoke"
+
+# No private registry in the smoke -> image resolution falls back to software.*.registry.
+inv_op_stack:
+  private_registry: {}
+
+software:
+  addon_cividash:
+    cividash_app:
+      registry: "ghcr.io"
+      repository: "jandaroscher/cividash-app"
+      tag: "dev"
+    cividash_web:
+      registry: "ghcr.io"
+      repository: "jandaroscher/cividash-web"
+      tag: "dev"
+
+DOMAIN: "smoke.local"
+ENVIRONMENT: "smoke"

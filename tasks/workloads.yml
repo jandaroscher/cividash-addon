@@ -43,6 +43,7 @@
          software.addon_cividash.cividash_web.repository }}:{{
          software.addon_cividash.cividash_web.tag }}
     cividash_image_pull_secret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
+    cividash_image_pull_policy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
     cividash_fpm_replicas: "{{ inv_addons.cividash.replicas.fpm | default(2) | int }}"
     cividash_web_replicas: "{{ inv_addons.cividash.replicas.web | default(2) | int }}"
     cividash_public_host: "{{ inv_addons.cividash.public_host }}"

@@ -40,7 +40,7 @@ spec:
       containers:
         - name: queue
           image: "{{ cividash_app_image }}"
-          imagePullPolicy: Always
+          imagePullPolicy: {{ cividash_image_pull_policy | default('Always') }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 82
@@ -85,13 +85,3 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
-          volumeMounts:
-            - name: storage-framework
-              mountPath: /var/www/html/storage/framework
-            - name: bootstrap-cache
-              mountPath: /var/www/html/bootstrap/cache
-      volumes:
-        - name: storage-framework
-          emptyDir: {}
-        - name: bootstrap-cache
-          emptyDir: {}

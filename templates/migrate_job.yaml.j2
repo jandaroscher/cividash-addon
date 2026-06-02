@@ -41,7 +41,7 @@ spec:
       containers:
         - name: migrate
           image: "{{ cividash_app_image }}"
-          imagePullPolicy: Always
+          imagePullPolicy: {{ cividash_image_pull_policy | default('Always') }}
           # Bypass the cache-warmer entrypoint: run artisan migrate directly.
           command: ["php", "artisan"]
           args: ["migrate", "--force"]
@@ -75,11 +75,6 @@ spec:
                   name: cividash-db-secret
                   key: MARIADB_PASSWORD
           # Per-pod writable paths (read-only image; Laravel needs these dirs).
-          volumeMounts:
-            - name: storage-framework
-              mountPath: /var/www/html/storage/framework
-            - name: bootstrap-cache
-              mountPath: /var/www/html/bootstrap/cache
           resources:
             requests:
               cpu: 100m
@@ -87,8 +82,3 @@ spec:
             limits:
               cpu: "1"
               memory: 512Mi
-      volumes:
-        - name: storage-framework
-          emptyDir: {}
-        - name: bootstrap-cache
-          emptyDir: {}

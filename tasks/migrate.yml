@@ -20,6 +20,7 @@
          ~ '/' ~ software.addon_cividash.cividash_app.repository
          ~ ':' ~ software.addon_cividash.cividash_app.tag }}
     cividash_image_pull_secret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
+    cividash_image_pull_policy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
 
 - name: "CIVIDASH: Remove any previous migrate Job (force fresh run)"
   kubernetes.core.k8s:
