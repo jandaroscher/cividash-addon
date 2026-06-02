@@ -54,6 +54,8 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          # Readiness gates traffic on the full path (nginx -> cividash-fpm /up):
+          # a downstream FPM outage only removes the pod from rotation.
           readinessProbe:
             httpGet:
               path: /up
@@ -62,9 +64,11 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
+          # Liveness checks ONLY that nginx itself is up (TCP accept on :80).
+          # It deliberately does NOT proxy to FPM, so a transient FPM outage
+          # cannot trigger cascading restarts of otherwise-healthy web pods.
           livenessProbe:
-            httpGet:
-              path: /up
+            tcpSocket:
               port: 80
             initialDelaySeconds: 30
             periodSeconds: 20

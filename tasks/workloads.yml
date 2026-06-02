@@ -46,7 +46,9 @@
     cividash_image_pull_policy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
     cividash_fpm_replicas: "{{ inv_addons.cividash.replicas.fpm | default(2) | int }}"
     cividash_web_replicas: "{{ inv_addons.cividash.replicas.web | default(2) | int }}"
-    cividash_public_host: "{{ inv_addons.cividash.public_host }}"
+    # Only meaningful when enable_ingress is true; defaulted so the workload
+    # facts don't blow up when ingress (and thus public_host) is disabled.
+    cividash_public_host: "{{ inv_addons.cividash.public_host | default('') }}"
 
 - name: "CIVIDASH Civitas: Ensure php-fpm deployment (cividash-fpm)"
   kubernetes.core.k8s:

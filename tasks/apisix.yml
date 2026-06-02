@@ -22,6 +22,9 @@
     # In-cluster upstream target: the nginx (cividash-web) service on port 80.
     cividash_web_upstream_host: "cividash-web.{{ k8s_namespace }}.svc.cluster.local"
     cividash_web_upstream_port: "80"
+    # Precomputed APISIX upstream nodes map ({"host:port": weight}). Kept as a
+    # native dict so it serializes as a JSON object (not a string) in the body.
+    cividash_web_upstream_nodes: "{{ { (cividash_web_upstream_host ~ ':' ~ cividash_web_upstream_port): 1 } }}"
     # Stable APISIX object identifiers (used as URL path segments for PUT).
     cividash_web_upstream_id: "cividash-web"
     cividash_web_route_id: "cividash-web"
@@ -38,13 +41,16 @@
       desc: "CiviDash nginx (cividash-web) upstream"
       type: "roundrobin"
       scheme: "http"
-      nodes: "{{ { (cividash_web_upstream_host ~ ':' ~ cividash_web_upstream_port) : 1 } }}"
+      # Unquoted Jinja yielding a dict: stays a JSON object once the body
+      # mapping is serialized with body_format: json -> "nodes": {"host:port": 1}.
+      nodes: "{{ cividash_web_upstream_nodes }}"
     headers:
       Accept: application/json
       X-API-KEY: "{{ inv_access.apisix.api_credentials.admin_role }}"
     status_code:
       - 200
       - 201
+  no_log: true
   when: inv_addons.cividash.enable
 
 - name: "CiviDash: APISIX - upsert open dashboard route (no auth plugin)"
@@ -62,4 +68,5 @@
     status_code:
       - 200
       - 201
+  no_log: true
   when: inv_addons.cividash.enable

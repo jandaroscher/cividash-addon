@@ -83,8 +83,17 @@ done
 echo "== /up via cividash-web =="
 kubectl --context "$CTX" -n "$NS" port-forward svc/cividash-web 18080:80 >/dev/null 2>&1 &
 PF=$!; sleep 4
-curl -s -o /dev/null -w '/up -> %{http_code}\n' http://localhost:18080/up || true
+# Capture the HTTP status (and tolerate transport errors -> empty CODE) WITHOUT
+# aborting the script yet, so the port-forward is always cleaned up below.
+CODE="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:18080/up || true)"
+echo "/up -> ${CODE:-<no response>}"
+# Always tear down the background port-forward before deciding pass/fail, so a
+# failed probe never leaks the kubectl port-forward process.
 kill "$PF" 2>/dev/null || true
+if [[ "$CODE" != "200" ]]; then
+  echo "FAIL: /up did not return 200 (got '${CODE:-<no response>}')" >&2
+  exit 1
+fi
 
 echo "== persisted rows =="
 kubectl --context "$CTX" -n "$NS" exec cividash-db-0 -- \

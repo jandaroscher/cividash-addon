@@ -45,9 +45,6 @@
 - name: "CiviDash: Validate required inventory keys"
   ansible.builtin.assert:
     that:
-      # ingress / routing
-      - inv_addons.cividash.public_host is defined
-      - inv_addons.cividash.public_host | length > 0
       # Keycloak client for Socialite admin SSO; the NGSI-LD token comes from
       # the shared api-access client, not this one
       - inv_addons.cividash.oidc_client_id is defined
@@ -64,10 +61,25 @@
       - inv_addons.cividash.s3.secret_access_key | length > 0
     fail_msg: >-
       Missing required keys in inv_addons.cividash.
-      Expected: public_host, oidc_client_id, db.{database,username,storage},
+      Expected: oidc_client_id, db.{database,username,storage},
       and the vaulted s3.{access_key_id,secret_access_key}.
       (DB password/root password are generated idempotently in tasks/secrets.yml.)
     success_msg: "CiviDash: required inventory keys present."
+  tags: ["addons", "addon_cividash"]
+
+# public_host only matters when ingress/APISIX are enabled (both gated on
+# enable_ingress). Assert it only then, so enable_ingress: false deploys
+# (no Ingress, no APISIX route) don't require a public_host.
+- name: "CiviDash: Validate public_host (ingress enabled)"
+  ansible.builtin.assert:
+    that:
+      - inv_addons.cividash.public_host is defined
+      - inv_addons.cividash.public_host | length > 0
+    fail_msg: >-
+      inv_addons.cividash.public_host is required when enable_ingress
+      is true (it backs the public Ingress and the APISIX route).
+    success_msg: "CiviDash: public_host present for ingress."
+  when: inv_addons.cividash.enable_ingress | default(true)
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------

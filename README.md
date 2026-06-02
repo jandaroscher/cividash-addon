@@ -153,4 +153,3 @@ kubectl -n "$NS" exec -i statefulset/cividash-db -- \
 ```
 
 Schedule these (CronJob / external backup runner) and store dumps off-cluster.
-```
