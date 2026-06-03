@@ -1,0 +1,42 @@
+---
+# =============================================================================
+# CIVIDASH Civitas Addon — Database (MariaDB)
+# =============================================================================
+# R1: MariaDB is NOT a CORE-native convention (CORE is Postgres-only via the
+#     Zalando operator). It is provided here as a raw StatefulSet + PVC, with NO
+#     operator / backup / Velero integration. This is an open policy question
+#     raised with the CORE team; Postgres is the documented alternative.
+#     Backups must be handled manually (see templates/mariadb_statefulset.yaml.j2
+#     for the manual-backup note).
+# =============================================================================
+
+- name: "CIVIDASH: Apply MariaDB headless Service (cividash-db)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/mariadb_service.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH: Apply MariaDB StatefulSet (cividash-db)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/mariadb_statefulset.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH: Wait until MariaDB StatefulSet is ready"
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    kind: StatefulSet
+    name: cividash-db
+  register: cividash_db_sts
+  until:
+    - cividash_db_sts.resources | length > 0
+    - cividash_db_sts.resources[0].status.readyReplicas is defined
+    - cividash_db_sts.resources[0].status.readyReplicas == (cividash_db_sts.resources[0].spec.replicas | default(1))
+  retries: 30
+  delay: 10

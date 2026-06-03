@@ -1,0 +1,109 @@
+---
+# =============================================================================
+# CIVIDASH Civitas: Application workloads (PHP-FPM, Nginx web, queue, scheduler)
+# + public Ingress.
+#
+# Raw kubernetes.core.k8s manifests rendered from Jinja2 templates (NO Helm),
+# following the airflow_addon / dez-real-addon raw-manifest pattern.
+#
+# Pre-requisites produced by sibling stages (do NOT recreate here):
+#   - Secret cividash-app-secret (APP_KEY + app env)         -> tasks/secrets.yml
+#   - Secret cividash-db-secret  (MariaDB credentials)       -> tasks/deploy_db.yml
+#   - Secret cividash-oidc-secret (Keycloak client + secret) -> tasks/keycloak_sso.yml
+#   - StatefulSet/Service cividash-db                         -> tasks/deploy_db.yml
+#   - Job cividash-migrate (php artisan migrate --force)      -> tasks/migrate.yml
+#
+# This stage applies the long-running app workloads in dependency order:
+#   1. cividash-fpm   Deployment + Service (php-fpm :9000)
+#   2. cividash-web   Deployment + Service (nginx  :80, fastcgi_pass cividash-fpm:9000)
+#   3. cividash-queue Deployment (php artisan queue:work)
+#   4. cividash-scheduler Deployment (php artisan schedule:run loop)
+#   5. Ingress (public_host -> cividash-web:80) when enable_ingress is true.
+#
+# Auth note (CONTRACT decision 2): the Ingress is OPEN. The Laravel/Filament
+# app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
+# No openid-connect / auth annotations are added here.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Resolve container images (airflow-style: private registry override -> default).
+# imagePullSecret is optional and only wired into pods when the inventory
+# provides inv_addons.cividash.image_pull_secret.
+# -----------------------------------------------------------------------------
+- name: "CIVIDASH Civitas: Resolve workload images and runtime facts"
+  ansible.builtin.set_fact:
+    cividash_app_image: >-
+      {{ inv_op_stack.private_registry.registry_full_url
+         | default(software.addon_cividash.cividash_app.registry) }}/{{
+         software.addon_cividash.cividash_app.repository }}:{{
+         software.addon_cividash.cividash_app.tag }}
+    cividash_web_image: >-
+      {{ inv_op_stack.private_registry.registry_full_url
+         | default(software.addon_cividash.cividash_web.registry) }}/{{
+         software.addon_cividash.cividash_web.repository }}:{{
+         software.addon_cividash.cividash_web.tag }}
+    cividash_image_pull_secret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
+    cividash_image_pull_policy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
+    cividash_fpm_replicas: "{{ inv_addons.cividash.replicas.fpm | default(2) | int }}"
+    cividash_web_replicas: "{{ inv_addons.cividash.replicas.web | default(2) | int }}"
+    # Only meaningful when enable_ingress is true; defaulted so the workload
+    # facts don't blow up when ingress (and thus public_host) is disabled.
+    cividash_public_host: "{{ inv_addons.cividash.public_host | default('') }}"
+
+- name: "CIVIDASH Civitas: Ensure php-fpm deployment (cividash-fpm)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/fpm_deployment.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH Civitas: Ensure php-fpm service (cividash-fpm)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/fpm_service.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH Civitas: Ensure web deployment (cividash-web)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/web_deployment.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH Civitas: Ensure web service (cividash-web)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/web_service.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH Civitas: Ensure queue worker deployment (cividash-queue)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/queue_deployment.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH Civitas: Ensure scheduler deployment (cividash-scheduler)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/scheduler_deployment.yaml.j2') | from_yaml }}"
+
+# Ingress is OPEN by design (CONTRACT decision 2) and gated on enable_ingress.
+- name: "CIVIDASH Civitas: Ensure public ingress (public_host -> cividash-web)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/ingress.yaml.j2') | from_yaml }}"
+  when: inv_addons.cividash.enable_ingress | default(false) | bool

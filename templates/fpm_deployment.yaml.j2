@@ -1,0 +1,89 @@
+{#
+  cividash-fpm: PHP-FPM application container (cividash_app image, full Laravel app).
+  - Listens on :9000 (image default CMD runs php-fpm; we only set env).
+  - App env via envFrom cividash-app-secret (APP_KEY, APP_*, S3/CIVITAS/KEYCLOAK...).
+  - DB credentials injected individually via secretKeyRef -> cividash-db-secret so
+    DB_DATABASE/USERNAME/PASSWORD never live in the app-secret.
+  - Per-pod writable dirs (storage/framework, bootstrap/cache) via emptyDir;
+    persistent media goes to S3 (PUBLIC_DISK_DRIVER=s3); logs -> stderr.
+  - Pod security per CONTRACT: non-root (uid 82 alpine www-data), no privilege
+    escalation, all caps dropped, RuntimeDefault seccomp.
+#}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cividash-fpm
+  labels:
+    app.kubernetes.io/name: cividash-fpm
+    app.kubernetes.io/part-of: cividash
+spec:
+  replicas: {{ cividash_fpm_replicas | int }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-fpm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cividash-fpm
+        app.kubernetes.io/part-of: cividash
+    spec:
+{% if cividash_image_pull_secret %}
+      imagePullSecrets:
+        - name: "{{ cividash_image_pull_secret }}"
+{% endif %}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: fpm
+          image: "{{ cividash_app_image }}"
+          imagePullPolicy: {{ cividash_image_pull_policy | default('Always') }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 82
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: fastcgi
+              containerPort: 9000
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-oidc-secret
+          env:
+            - name: DB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: cividash-db-secret
+                  key: MARIADB_DATABASE
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cividash-db-secret
+                  key: MARIADB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cividash-db-secret
+                  key: MARIADB_PASSWORD
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3

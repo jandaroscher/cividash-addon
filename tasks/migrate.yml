@@ -1,0 +1,57 @@
+---
+# =============================================================================
+# CIVIDASH Civitas Addon — Database migration Job (cividash-migrate)
+# =============================================================================
+# Runs "php artisan migrate --force" against the MariaDB StatefulSet before the
+# app pods serve traffic. The cividash_app image's default entrypoint warms caches;
+# we bypass that by overriding command to ["php","artisan"] + args
+# ["migrate","--force"] so the Job does exactly the migration and nothing else.
+#
+# Idempotency: the Job object is recreated on each run (force) so re-applying the
+# add-on always runs migrations against the current image. Laravel migrations are
+# themselves idempotent (already-run migrations are skipped).
+# =============================================================================
+
+- name: "CIVIDASH: Resolve cividash_app image for migrate Job"
+  ansible.builtin.set_fact:
+    cividash_app_image: >-
+      {{ (inv_op_stack.private_registry.registry_full_url
+          | default(software.addon_cividash.cividash_app.registry))
+         ~ '/' ~ software.addon_cividash.cividash_app.repository
+         ~ ':' ~ software.addon_cividash.cividash_app.tag }}
+    cividash_image_pull_secret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
+    cividash_image_pull_policy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
+
+- name: "CIVIDASH: Remove any previous migrate Job (force fresh run)"
+  kubernetes.core.k8s:
+    state: absent
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    kind: Job
+    name: cividash-migrate
+    wait: true
+    wait_timeout: 120
+
+- name: "CIVIDASH: Apply migrate Job (cividash-migrate)"
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/migrate_job.yaml.j2') | from_yaml }}"
+
+- name: "CIVIDASH: Wait for migrate Job to complete"
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    namespace: "{{ k8s_namespace }}"
+    kind: Job
+    name: cividash-migrate
+  register: cividash_migrate_job
+  until:
+    - cividash_migrate_job.resources | length > 0
+    - cividash_migrate_job.resources[0].status.succeeded is defined
+    - cividash_migrate_job.resources[0].status.succeeded | int >= 1
+  retries: 30
+  delay: 10

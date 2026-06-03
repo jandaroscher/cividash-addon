@@ -1,5 +1,8 @@
 ---
 addon_dir: "addons/cividash_addon/"
 
-# Default Keycloak client ID for CIVIDASH Civitas Dashboard
+# Default Keycloak client ID for CiviDash, used when
+# inv_addons.cividash.oidc_client_id is unset. Used by the APP for the
+# Socialite admin SSO only, NOT by APISIX: the APISIX route is open; admin auth
+# is handled by the app (see docs/authentication.md).
 IDM_CLIENT_CIVIDASH: "cividash"

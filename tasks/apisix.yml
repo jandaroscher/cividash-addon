@@ -1,0 +1,72 @@
+---
+# -----------------------------------------------------------------------------
+# CiviDash: APISIX gateway registration
+# -----------------------------------------------------------------------------
+# Registers the dashboard with the platform APISIX gateway via the APISIX
+#
+# ADMIN AUTH IS HANDLED BY THE APP, NOT APISIX:
+#   The APISIX route registered here is FULLY OPEN. There is intentionally NO
+#   openid-connect / auth plugin gate. A single host route with uri prefix /*
+#   forwards everything (/, /api/*, /admin, /filament, /docs ...) to the
+#   cividash-web upstream. The Laravel/Filament application enforces its own auth
+#   (Fortify + optional Keycloak Socialite SSO). Do NOT add an auth plugin here.
+#
+# Idempotency: PUT against stable IDs ("cividash-web"); APISIX returns
+# 200 (update) or 201 (create), both treated as success.
+# -----------------------------------------------------------------------------
+
+- name: "CiviDash: APISIX - resolve route facts"
+  ansible.builtin.set_fact:
+    # Public hostname the dashboard is served on.
+    cividash_public_host: "{{ inv_addons.cividash.public_host }}"
+    # In-cluster upstream target: the nginx (cividash-web) service on port 80.
+    cividash_web_upstream_host: "cividash-web.{{ k8s_namespace }}.svc.cluster.local"
+    cividash_web_upstream_port: "80"
+    # Precomputed APISIX upstream nodes map ({"host:port": weight}). Kept as a
+    # native dict so it serializes as a JSON object (not a string) in the body.
+    cividash_web_upstream_nodes: "{{ { (cividash_web_upstream_host ~ ':' ~ cividash_web_upstream_port): 1 } }}"
+    # Stable APISIX object identifiers (used as URL path segments for PUT).
+    cividash_web_upstream_id: "cividash-web"
+    cividash_web_route_id: "cividash-web"
+  when: inv_addons.cividash.enable
+
+- name: "CiviDash: APISIX - upsert web upstream"
+  ansible.builtin.uri:
+    method: PUT
+    url: "https://api-admin.{{ DOMAIN }}/apisix/admin/upstreams/{{ cividash_web_upstream_id }}"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    body_format: json
+    body:
+      name: "cividash-web"
+      desc: "CiviDash nginx (cividash-web) upstream"
+      type: "roundrobin"
+      scheme: "http"
+      # Unquoted Jinja yielding a dict: stays a JSON object once the body
+      # mapping is serialized with body_format: json -> "nodes": {"host:port": 1}.
+      nodes: "{{ cividash_web_upstream_nodes }}"
+    headers:
+      Accept: application/json
+      X-API-KEY: "{{ inv_access.apisix.api_credentials.admin_role }}"
+    status_code:
+      - 200
+      - 201
+  no_log: true
+  when: inv_addons.cividash.enable
+
+- name: "CiviDash: APISIX - upsert open dashboard route (no auth plugin)"
+  ansible.builtin.uri:
+    method: PUT
+    url: "https://api-admin.{{ DOMAIN }}/apisix/admin/routes/{{ cividash_web_route_id }}"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    body_format: json
+    # Route body rendered from templates/apis/cividash_public_route.json so the
+    # open-route definition lives in one reviewable file.
+    body: "{{ lookup('template', addon_dir + 'templates/apis/cividash_public_route.json') | from_json }}"
+    headers:
+      Accept: application/json
+      X-API-KEY: "{{ inv_access.apisix.api_credentials.admin_role }}"
+    status_code:
+      - 200
+      - 201
+  no_log: true
+  when: inv_addons.cividash.enable
