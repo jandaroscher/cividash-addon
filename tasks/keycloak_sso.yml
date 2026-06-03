@@ -159,7 +159,18 @@
         name: cividash-oidc-secret
       data:
         # --- Socialite admin SSO (Keycloak Socialite provider) ---
+        # Enables the SSO login button in Filament (config integrations.keycloak_sso.enabled).
+        # Without this the KeycloakSsoController code ships but stays inert.
+        KEYCLOAK_SSO_ENABLED: "{{ 'true' | b64encode }}"
         KEYCLOAK_BASE_URL: "{{ inv_access.platform.hostname | b64encode }}"
+        # In-cluster Keycloak URL for the SERVER-SIDE token exchange in the SSO
+        # callback. The browser flow uses the public KEYCLOAK_BASE_URL (https),
+        # but the server-side call must hit Keycloak in-cluster over http to
+        # avoid relying on the platform's CA being in the app container's trust
+        # store (a self-signed CA otherwise yields cURL error 60 -> login loop).
+        # Defaults to the CORE Keycloak service; override per platform if named
+        # differently.
+        KEYCLOAK_BASE_URL_INTERNAL: "{{ (inv_addons.cividash.keycloak_base_url_internal | default('http://idmkeycloak.' ~ ENVIRONMENT ~ '-access-stack.svc.cluster.local')) | b64encode }}"
         KEYCLOAK_REALM: "{{ inv_access.tenant.realm_name | b64encode }}"
         KEYCLOAK_CLIENT_ID: "{{ cividash_oidc_client_id | b64encode }}"
         KEYCLOAK_CLIENT_SECRET: "{{ IDM_CLIENT_SECRET_CIVIDASH | b64encode }}"

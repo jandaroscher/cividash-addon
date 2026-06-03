@@ -24,7 +24,10 @@
     cividash_web_upstream_port: "80"
     # Precomputed APISIX upstream nodes map ({"host:port": weight}). Kept as a
     # native dict so it serializes as a JSON object (not a string) in the body.
-    cividash_web_upstream_nodes: "{{ { (cividash_web_upstream_host ~ ':' ~ cividash_web_upstream_port): 1 } }}"
+    # NOTE: built directly from k8s_namespace (NOT the sibling host/port facts
+    # above) -- set_fact evaluates all keys against the pre-task state, so
+    # same-block facts are not yet defined when this expression is rendered.
+    cividash_web_upstream_nodes: "{{ {('cividash-web.' ~ k8s_namespace ~ '.svc.cluster.local:80'): 1} }}"
     # Stable APISIX object identifiers (used as URL path segments for PUT).
     cividash_web_upstream_id: "cividash-web"
     cividash_web_route_id: "cividash-web"
@@ -61,7 +64,10 @@
     body_format: json
     # Route body rendered from templates/apis/cividash_public_route.json so the
     # open-route definition lives in one reviewable file.
-    body: "{{ lookup('template', addon_dir + 'templates/apis/cividash_public_route.json') | from_json }}"
+    # convert_data=False keeps the lookup result a raw string so from_json
+    # parses it deterministically (without it, Ansible may auto-parse the JSON
+    # to a dict and from_json then errors with "must be str, not dict").
+    body: "{{ lookup('template', addon_dir + 'templates/apis/cividash_public_route.json', convert_data=False) | from_json }}"
     headers:
       Accept: application/json
       X-API-KEY: "{{ inv_access.apisix.api_credentials.admin_role }}"
