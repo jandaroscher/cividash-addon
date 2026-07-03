@@ -17,7 +17,7 @@ provisioned PostgreSQL** (see **R1**).
 
 | Object | Kind | Notes |
 | --- | --- | --- |
-| `cividash-db-secret` | Secret | External-Postgres connection (`DB_CONNECTION`/`HOST`/`PORT`/`DATABASE`/`USERNAME`/`PASSWORD`), rendered from the role vars |
+| `cividash-db-secret` | Secret | External-Postgres connection (`DB_CONNECTION`/`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`), rendered from the role vars |
 | `cividash-app-secret` | Secret | `APP_KEY` (generated idempotently) + app env |
 | `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task |
 | `cividash-migrate` | Job | `php artisan migrate --force`, runs before workloads |
@@ -163,8 +163,10 @@ PostgreSQL and closes the open policy question.
 ### Provisioning the PostgreSQL (out of scope for the add-on)
 
 The Postgres instance/database is provided by the operator / CORE. The add-on is
-agnostic to the topology — any option works as long as
-`db.{host,port,database,username,password}` are supplied:
+agnostic to the topology — any option works as long as the connection details are
+supplied. `db.host` and `db.password` are **required** (no default); `db.port`,
+`db.database` and `db.username` fall back to the defaults in
+[`vars/default.yml`](vars/default.yml):
 
 1. **Dedicated Zalando `postgresql` cluster** in the CORE cluster (operator-managed
    backups, HA). Point `db.host` at its Service.
