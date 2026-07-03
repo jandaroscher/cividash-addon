@@ -2,7 +2,7 @@
 # =============================================================================
 # CIVIDASH Civitas Addon — Database migration Job (cividash-migrate)
 # =============================================================================
-# Runs "php artisan migrate --force" against the MariaDB StatefulSet before the
+# Runs "php artisan migrate --force" against the external PostgreSQL before the
 # app pods serve traffic. The cividash_app image's default entrypoint warms caches;
 # we bypass that by overriding command to ["php","artisan"] + args
 # ["migrate","--force"] so the Job does exactly the migration and nothing else.

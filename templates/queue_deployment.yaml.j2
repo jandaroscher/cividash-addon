@@ -4,7 +4,8 @@
   - --max-time=3600 recycles the worker hourly so a fresh process picks up
     new code/config; --tries=3 bounds retries.
   - Single replica, no Service (background worker, not network-addressable).
-  - Same env contract as FPM: app-secret + individual DB creds via secretKeyRef.
+  - Same env contract as FPM: app-secret + external-Postgres connection via
+    envFrom cividash-db-secret.
   - emptyDir mounts for the per-pod writable Laravel dirs.
   - Liveness via exec pgrep so a wedged worker process gets restarted.
 #}
@@ -54,27 +55,15 @@ spec:
             - queue:work
             - --tries=3
             - --max-time=3600
+          # cividash-db-secret carries the full external-Postgres connection
+          # (DB_CONNECTION/HOST/PORT/DATABASE/USERNAME/PASSWORD) in one place.
           envFrom:
             - secretRef:
                 name: cividash-app-secret
             - secretRef:
                 name: cividash-oidc-secret
-          env:
-            - name: DB_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_DATABASE
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_PASSWORD
+            - secretRef:
+                name: cividash-db-secret
           livenessProbe:
             exec:
               command:

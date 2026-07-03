@@ -6,6 +6,11 @@
 # role task files (tasks/secrets.yml, database.yml, migrate.yml, workloads.yml)
 # — so this exercises the actual manifests/templates, not a copy.
 #
+# The add-on bundles no database, so this playbook stands up a throwaway
+# in-cluster PostgreSQL (cividash-smoke-postgres) that stands in for the operator-
+# provided external Postgres. tasks/database.yml then just renders cividash-db-secret
+# from smoke-vars.yml (db.host -> cividash-smoke-postgres).
+#
 # Skipped vs. a full CORE deploy (they need a real control plane):
 #   - tasks/keycloak_sso.yml  -> replaced by a placeholder cividash-oidc-secret
 #   - tasks/apisix.yml        -> not run (no APISIX admin API locally)
@@ -38,7 +43,89 @@
           metadata:
             name: "{{ k8s_namespace }}"
 
-    - name: "Smoke: secrets (cividash-db-secret + cividash-app-secret)"
+    # Throwaway PostgreSQL — stands in for the operator-provided external DB.
+    # Not part of the add-on; it only exists so the smoke has something to
+    # migrate against. emptyDir storage (data is thrown away with the cluster).
+    - name: "Smoke: throwaway PostgreSQL (cividash-smoke-postgres)"
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        namespace: "{{ k8s_namespace }}"
+        definition:
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: cividash-smoke-postgres
+              labels:
+                app.kubernetes.io/name: cividash-smoke-postgres
+            spec:
+              selector:
+                app.kubernetes.io/name: cividash-smoke-postgres
+              ports:
+                - name: postgres
+                  port: 5432
+                  targetPort: 5432
+          - apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: cividash-smoke-postgres
+              labels:
+                app.kubernetes.io/name: cividash-smoke-postgres
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: cividash-smoke-postgres
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: cividash-smoke-postgres
+                spec:
+                  containers:
+                    - name: postgres
+                      image: "postgres:16-alpine"
+                      env:
+                        - name: POSTGRES_DB
+                          value: "{{ inv_addons.cividash.db.database }}"
+                        - name: POSTGRES_USER
+                          value: "{{ inv_addons.cividash.db.username }}"
+                        - name: POSTGRES_PASSWORD
+                          value: "{{ inv_addons.cividash.db.password }}"
+                        # postgres writes a lock file under PGDATA; keep it on the
+                        # emptyDir mount by using a subdir it fully owns.
+                        - name: PGDATA
+                          value: /var/lib/postgresql/data/pgdata
+                      ports:
+                        - containerPort: 5432
+                      readinessProbe:
+                        exec:
+                          command: ["pg_isready", "-U", "{{ inv_addons.cividash.db.username }}", "-d", "{{ inv_addons.cividash.db.database }}"]
+                        initialDelaySeconds: 5
+                        periodSeconds: 5
+                      volumeMounts:
+                        - name: data
+                          mountPath: /var/lib/postgresql/data
+                  volumes:
+                    - name: data
+                      emptyDir: {}
+
+    - name: "Smoke: wait for throwaway PostgreSQL to be ready"
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        namespace: "{{ k8s_namespace }}"
+        kind: Deployment
+        name: cividash-smoke-postgres
+      register: smoke_pg
+      until:
+        - smoke_pg.resources | length > 0
+        - smoke_pg.resources[0].status.readyReplicas is defined
+        - smoke_pg.resources[0].status.readyReplicas == 1
+      retries: 30
+      delay: 5
+
+    - name: "Smoke: app secret (cividash-app-secret)"
       ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/secrets.yml"
 
     # keycloak_sso.yml is skipped locally; the workloads' envFrom references
@@ -67,7 +154,7 @@
             CIVITAS_OAUTH_CLIENT_ID: ""
             CIVITAS_OAUTH_CLIENT_SECRET: ""
 
-    - name: "Smoke: database (MariaDB StatefulSet + Service)"
+    - name: "Smoke: database connection secret (cividash-db-secret)"
       ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/database.yml"
 
     - name: "Smoke: migration Job (php artisan migrate --force)"

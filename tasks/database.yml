@@ -1,42 +1,41 @@
 ---
 # =============================================================================
-# CIVIDASH Civitas Addon — Database (MariaDB)
+# CIVIDASH Civitas Addon — Database (external PostgreSQL)
 # =============================================================================
-# R1: MariaDB is NOT a CORE-native convention (CORE is Postgres-only via the
-#     Zalando operator). It is provided here as a raw StatefulSet + PVC, with NO
-#     operator / backup / Velero integration. This is an open policy question
-#     raised with the CORE team; Postgres is the documented alternative.
-#     Backups must be handled manually (see templates/mariadb_statefulset.yaml.j2
-#     for the manual-backup note).
+# R1 (RESOLVED): The dashboard is DB-agnostic — it reads DB_CONNECTION, DB_HOST,
+#   DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD — and now targets PostgreSQL,
+#   which IS the CORE-native convention (CORE is Postgres-only, provisioned via
+#   the Zalando Postgres operator with operator-managed backups). The DB server
+#   the add-on previously bundled itself (a raw, non-CORE, unbacked-up
+#   StatefulSet + PVC) is gone.
+#
+#   This add-on no longer runs a database server. It expects an EXTERNALLY
+#   provisioned Postgres and only renders the connection Secret (cividash-db-secret)
+#   from the role vars (vars/default.yml, overridable from the platform
+#   inventory). Provisioning that Postgres is out of scope for the add-on and
+#   follows the topology agreed with CORE; the add-on is agnostic to
+#   either option as long as host/database/user/password are supplied:
+#     - a dedicated Zalando `postgresql` cluster in the CORE cluster, or
+#     - a `preparedDatabases` schema/role inside the central CORE Postgres.
 # =============================================================================
 
-- name: "CIVIDASH: Apply MariaDB headless Service (cividash-db)"
+- name: "CIVIDASH: Apply DB connection Secret (cividash-db-secret)"
   kubernetes.core.k8s:
     state: present
     kubeconfig: "{{ k8s_config }}"
     context: "{{ k8s_context }}"
     namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('template', addon_dir + 'templates/mariadb_service.yaml.j2') | from_yaml }}"
+    definition: "{{ lookup('template', addon_dir + 'templates/db_secret.yaml.j2') | from_yaml }}"
+  no_log: true  # secret payload — keep DB credentials out of the log
 
-- name: "CIVIDASH: Apply MariaDB StatefulSet (cividash-db)"
-  kubernetes.core.k8s:
-    state: present
-    kubeconfig: "{{ k8s_config }}"
-    context: "{{ k8s_context }}"
-    namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('template', addon_dir + 'templates/mariadb_statefulset.yaml.j2') | from_yaml }}"
-
-- name: "CIVIDASH: Wait until MariaDB StatefulSet is ready"
-  kubernetes.core.k8s_info:
-    kubeconfig: "{{ k8s_config }}"
-    context: "{{ k8s_context }}"
-    namespace: "{{ k8s_namespace }}"
-    kind: StatefulSet
-    name: cividash-db
-  register: cividash_db_sts
-  until:
-    - cividash_db_sts.resources | length > 0
-    - cividash_db_sts.resources[0].status.readyReplicas is defined
-    - cividash_db_sts.resources[0].status.readyReplicas == (cividash_db_sts.resources[0].spec.replicas | default(1))
-  retries: 30
-  delay: 10
+# Optional pre-flight connectivity check against the externally provided Postgres.
+# `wait_for` runs on the Ansible controller, so it only works when the DB endpoint
+# is reachable from there. It is DISABLED by default because an in-cluster-only
+# Postgres (e.g. a Zalando cluster Service) is not reachable from the controller;
+# enable it with `cividash_db_readiness_check: true` when the endpoint is reachable.
+- name: "CiviDash: Wait for external Postgres to accept TCP connections (optional)"
+  ansible.builtin.wait_for:
+    host: "{{ cividash_db_host }}"
+    port: "{{ cividash_db_port | int }}"
+    timeout: "{{ cividash_db_readiness_timeout | default(60) | int }}"
+  when: cividash_db_readiness_check | default(false) | bool

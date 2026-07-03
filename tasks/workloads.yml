@@ -8,9 +8,8 @@
 #
 # Pre-requisites produced by sibling stages (do NOT recreate here):
 #   - Secret cividash-app-secret (APP_KEY + app env)         -> tasks/secrets.yml
-#   - Secret cividash-db-secret  (MariaDB credentials)       -> tasks/deploy_db.yml
+#   - Secret cividash-db-secret  (external Postgres conn)    -> tasks/database.yml
 #   - Secret cividash-oidc-secret (Keycloak client + secret) -> tasks/keycloak_sso.yml
-#   - StatefulSet/Service cividash-db                         -> tasks/deploy_db.yml
 #   - Job cividash-migrate (php artisan migrate --force)      -> tasks/migrate.yml
 #
 # This stage applies the long-running app workloads in dependency order:
