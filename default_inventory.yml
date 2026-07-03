@@ -33,6 +33,11 @@ all:
             # Client used by the APP (not by APISIX): Socialite admin SSO
             # (standard flow) + client-credentials for the NGSI-LD token.
             oidc_client_id: "{{ IDM_CLIENT_CIVIDASH | default('cividash') }}"
+            # In-cluster Keycloak URL for the SSO callback's server-side token
+            # exchange (avoids needing the platform CA in the app trust store).
+            # Defaults to the CORE Keycloak service "idmkeycloak.<env>-access-stack";
+            # override if your platform names the service/namespace differently.
+            # keycloak_base_url_internal: "http://idmkeycloak.{{ ENVIRONMENT }}-access-stack.svc.cluster.local"
 
             # --- workload scaling ------------------------------------------
             replicas:
