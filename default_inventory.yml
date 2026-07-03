@@ -44,14 +44,19 @@ all:
               web: 2
               fpm: 2
 
-            # --- database (R1: MariaDB StatefulSet, NOT a CORE convention) ---
-            # CORE is Postgres-only via the Zalando operator. This MariaDB is a
-            # raw StatefulSet + PVC with no operator/backup integration. See the
-            # README "R1" note and the header in tasks/database.yml.
-            db:
-              database: "cividash"
-              username: "cividash"
-              storage: "5Gi"
+            # --- database (external PostgreSQL) ----------------------------
+            # R1 resolved: the add-on no longer ships its own database server.
+            # It connects to an externally-provided PostgreSQL — host, database,
+            # user and password are supplied by the CORE operator (e.g. an own
+            # Zalando cluster or preparedDatabases). host + password are REQUIRED (no default) and
+            # MUST come from your vaulted inventory; database/username/port
+            # default in templates/values.yaml.j2. Uncomment to override the defaults:
+            # db:
+            #   host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED, provided by the CORE operator
+            #   port: 5432
+            #   database: "cividash"
+            #   username: "cividash"
+            #   password: "<from your vaulted inventory>"  # REQUIRED
 
             # --- CIVITAS / NGSI-LD -----------------------------------------
             # Base URL of the CORE context broker; the app appends /context/ngsi-ld.
