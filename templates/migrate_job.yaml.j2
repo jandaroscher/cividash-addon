@@ -4,8 +4,9 @@
 # Image: cividash_app (php-fpm, full app).
 # Entrypoint overridden to ["php","artisan"] + args ["migrate","--force"] so the
 # image's default cache-warmer entrypoint is bypassed and only migrations run.
-# Env: app config from cividash-app-secret (envFrom) + DB credentials from
-# cividash-db-secret via secretKeyRef (DB_DATABASE/DB_USERNAME/DB_PASSWORD).
+# Env: app config from cividash-app-secret (envFrom) + the external-Postgres
+# connection from cividash-db-secret via envFrom (DB_CONNECTION/HOST/PORT/DATABASE/
+# USERNAME/PASSWORD).
 # =============================================================================
 apiVersion: batch/v1
 kind: Job
@@ -51,29 +52,16 @@ spec:
             capabilities:
               drop:
                 - ALL
-          # Non-DB app env (incl. APP_KEY) from cividash-app-secret + OIDC/CIVITAS env.
+          # Non-DB app env (incl. APP_KEY) from cividash-app-secret + OIDC/CIVITAS env,
+          # plus the full external-Postgres connection from cividash-db-secret
+          # (DB_CONNECTION/HOST/PORT/DATABASE/USERNAME/PASSWORD).
           envFrom:
             - secretRef:
                 name: cividash-app-secret
             - secretRef:
                 name: cividash-oidc-secret
-          # DB credentials single-sourced from cividash-db-secret.
-          env:
-            - name: DB_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_DATABASE
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: cividash-db-secret
-                  key: MARIADB_PASSWORD
+            - secretRef:
+                name: cividash-db-secret
           # Per-pod writable paths (read-only image; Laravel needs these dirs).
           resources:
             requests:

@@ -3,12 +3,13 @@
 # Local kind smoke for the cividash-addon.
 #
 # Spins up a throwaway kind cluster, loads the locally-built cividash-app/cividash-web
-# images, deploys the add-on data-plane (MariaDB StatefulSet + fpm/web/queue/
-# scheduler + migrate Job) via the REAL role tasks, and pulls NGSI-LD data from
-# the local bare Stellio broker on the host (docker/civitas/v1.6.2 stack, :8090).
+# images, stands up a throwaway PostgreSQL (cividash-smoke-postgres, standing in for
+# the operator-provided external DB), deploys the add-on data-plane (fpm/web/
+# queue/scheduler + migrate Job) via the REAL role tasks, and pulls NGSI-LD data
+# from the local bare Stellio broker on the host (docker/civitas/v1.6.2, :8090).
 #
 # Keycloak/APISIX/Ingress are skipped (they need a full CORE control plane);
-# this proves the own-DB approach + the manifests work in a real cluster.
+# this proves the external-Postgres approach + the manifests work in a real cluster.
 #
 # Prereqs: kind, kubectl, ansible (+ `kubernetes` python lib), docker;
 #          images cividash-app:dev + cividash-web:dev built; Stellio reachable on :8090.
@@ -96,7 +97,8 @@ if [[ "$CODE" != "200" ]]; then
 fi
 
 echo "== persisted rows =="
-kubectl --context "$CTX" -n "$NS" exec cividash-db-0 -- \
-  sh -c 'mariadb -ucividash -p"$MARIADB_PASSWORD" cividash -N -e "select concat(\"tiles=\", count(*)) from tiles; select concat(\"metric_values=\", count(*)) from metric_values;"' 2>/dev/null || true
+kubectl --context "$CTX" -n "$NS" exec deploy/cividash-smoke-postgres -- \
+  env PGPASSWORD=smoke-db-pass psql -U cividash -d cividash -tAc \
+  "select 'tiles='||count(*) from tiles; select 'metric_values='||count(*) from metric_values;" 2>/dev/null || true
 
 echo "DONE"

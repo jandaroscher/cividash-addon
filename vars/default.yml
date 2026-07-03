@@ -6,3 +6,27 @@ addon_dir: "addons/cividash_addon/"
 # Socialite admin SSO only, NOT by APISIX: the APISIX route is open; admin auth
 # is handled by the app (see docs/authentication.md).
 IDM_CLIENT_CIVIDASH: "cividash"
+
+# -----------------------------------------------------------------------------
+# Database connection (external PostgreSQL) — role defaults.
+# -----------------------------------------------------------------------------
+# The add-on is DB-agnostic and bundles no database server. It connects
+# to an EXTERNALLY provisioned Postgres. Host / database / user / PASSWORD are
+# provided by the operator / CORE and MUST be set in your (vaulted) platform
+# inventory under inv_addons.cividash.db.*:
+#   db.host      -> cividash_db_host       (REQUIRED — the Postgres endpoint)
+#   db.port      -> cividash_db_port       (defaults to 5432)
+#   db.database  -> cividash_db_name       (defaults to "cividash")
+#   db.username  -> cividash_db_user       (defaults to "cividash")
+#   db.password  -> cividash_db_password   (REQUIRED — supply via VAULT, never hardcode)
+#
+# These vars flow into cividash-db-secret (templates/db_secret.yaml.j2) as the
+# DB_CONNECTION/DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD env the app
+# reads. The empty defaults for host/password are deliberate: tasks/cividash.yml
+# asserts they are non-empty and fails fast when the operator forgot to supply them.
+cividash_db_connection: "pgsql"
+cividash_db_host: "{{ inv_addons.cividash.db.host | default('') }}"
+cividash_db_port: "{{ inv_addons.cividash.db.port | default(5432) }}"
+cividash_db_name: "{{ inv_addons.cividash.db.database | default('cividash') }}"
+cividash_db_user: "{{ inv_addons.cividash.db.username | default('cividash') }}"
+cividash_db_password: "{{ inv_addons.cividash.db.password | default('') }}"

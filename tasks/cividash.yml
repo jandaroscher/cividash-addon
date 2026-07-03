@@ -49,11 +49,15 @@
       # the shared api-access client, not this one
       - inv_addons.cividash.oidc_client_id is defined
       - inv_addons.cividash.oidc_client_id | length > 0
-      # MariaDB StatefulSet settings (R1: own DB, not a CORE-native convention)
+      # External PostgreSQL connection (R1 resolved: CORE-native Postgres,
+      # provisioned OUTSIDE the add-on). host + password are REQUIRED and come
+      # from the (vaulted) inventory; database/username/port fall back to
+      # sensible defaults in vars/default.yml.
       - inv_addons.cividash.db is defined
-      - inv_addons.cividash.db.database is defined
-      - inv_addons.cividash.db.username is defined
-      - inv_addons.cividash.db.storage is defined
+      - inv_addons.cividash.db.host is defined
+      - inv_addons.cividash.db.host | length > 0
+      - inv_addons.cividash.db.password is defined
+      - inv_addons.cividash.db.password | length > 0
       # S3 credentials (vaulted): rendered into cividash-app-secret as AWS_*.
       - inv_addons.cividash.s3.access_key_id is defined
       - inv_addons.cividash.s3.access_key_id | length > 0
@@ -61,9 +65,9 @@
       - inv_addons.cividash.s3.secret_access_key | length > 0
     fail_msg: >-
       Missing required keys in inv_addons.cividash.
-      Expected: oidc_client_id, db.{database,username,storage},
-      and the vaulted s3.{access_key_id,secret_access_key}.
-      (DB password/root password are generated idempotently in tasks/secrets.yml.)
+      Expected: oidc_client_id, the vaulted external-Postgres db.{host,password}
+      (db.{database,username,port} default in vars/default.yml), and the vaulted
+      s3.{access_key_id,secret_access_key}.
     success_msg: "CiviDash: required inventory keys present."
   tags: ["addons", "addon_cividash"]
 
@@ -104,17 +108,17 @@
 #   lookup('template', addon_dir + 'templates/<file>.yaml.j2') | from_yaml
 # -----------------------------------------------------------------------------
 
-# 1) Secrets: cividash-db-secret (DB creds + root pw, generated idempotently) and
-#    cividash-app-secret (APP_KEY generated idempotently + app env vars).
-- name: "CIVIDASH Civitas: Deploy secrets (DB + app base)"
+# 1) Secrets: cividash-app-secret (APP_KEY generated idempotently + app env vars).
+#    The DB connection Secret (cividash-db-secret) is rendered in stage 2 (database).
+- name: "CIVIDASH Civitas: Deploy app secret (APP_KEY + app base env)"
   ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/secrets.yml' }}"
   tags: ["addons", "addon_cividash"]
 
-# 2) Database: MariaDB StatefulSet + headless Service, then wait-ready.
-#    R1: MariaDB is NOT a CORE-native convention (CORE is Postgres-only via
-#    the Zalando operator). Provided as a raw StatefulSet + PVC with no
-#    operator/backup integration — see the comment header in tasks/database.yml.
-- name: "CIVIDASH Civitas: Deploy MariaDB StatefulSet"
+# 2) Database: render the external-Postgres connection Secret (cividash-db-secret)
+#    from the role vars and optionally probe the DB endpoint. R1 resolved: the
+#    add-on no longer bundles a DB server; CORE provides Postgres (Zalando
+#    operator or a preparedDatabases schema) — see tasks/database.yml header.
+- name: "CIVIDASH Civitas: Provision external Postgres connection"
   ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/database.yml' }}"
   tags: ["addons", "addon_cividash"]
 

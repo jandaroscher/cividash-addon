@@ -1,15 +1,16 @@
 # Local kind smoke (`dev/`)
 
 A throwaway way to validate the add-on's **data-plane** in a real Kubernetes
-cluster without a full CIVITAS/CORE control plane. It deploys the MariaDB
-StatefulSet + the four app workloads + the migration Job using the **real role
-task files** (`tasks/secrets.yml`, `database.yml`, `migrate.yml`,
-`workloads.yml`) and pulls NGSI-LD data from a **local bare Stellio broker** on
-the host.
+cluster without a full CIVITAS/CORE control plane. It stands up a throwaway
+in-cluster **PostgreSQL** (`cividash-smoke-postgres`, standing in for the operator-
+provided external DB), then deploys the four app workloads + the migration Job
+using the **real role task files** (`tasks/secrets.yml`, `database.yml`,
+`migrate.yml`, `workloads.yml`) and pulls NGSI-LD data from a **local bare
+Stellio broker** on the host.
 
 **Skipped** (require a real CORE control plane): `tasks/keycloak_sso.yml`
 (replaced by a placeholder `cividash-oidc-secret`), `tasks/apisix.yml`, and the
-Ingress (`enable_ingress: false`). So this proves the own-MariaDB approach,
+Ingress (`enable_ingress: false`). So this proves the external-Postgres approach,
 the manifests, and the in-cluster NGSI-LD pull — not the APISIX/Keycloak wiring.
 
 ## Prerequisites
@@ -29,7 +30,7 @@ dev/run-smoke.sh teardown   # delete the kind cluster
 
 Expected: all pods `Running`, `cividash-migrate` `Complete`, `/up` → 200, and the
 NGSI-LD sync reports `created N` then an idempotent re-run `skipped N`, with the
-rows persisted into the in-cluster MariaDB.
+rows persisted into the in-cluster PostgreSQL.
 
 ## Notes
 

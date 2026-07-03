@@ -12,10 +12,12 @@ manifests and `uri`-based Keycloak / APISIX Admin-API calls — not a Helm chart
 
 Into the namespace `{{ ENVIRONMENT }}-cividash-stack`:
 
+The database is **not** deployed by the add-on: it connects to an **externally
+provisioned PostgreSQL** (see **R1**).
+
 | Object | Kind | Notes |
 | --- | --- | --- |
-| `cividash-db` | StatefulSet + headless Service (3306) | MariaDB 11, PVC `cividash-db-data` (see **R1**) |
-| `cividash-db-secret` | Secret | DB name/user/password + root password, generated idempotently |
+| `cividash-db-secret` | Secret | External-Postgres connection (`DB_CONNECTION`/`HOST`/`PORT`/`DATABASE`/`USERNAME`/`PASSWORD`), rendered from the role vars |
 | `cividash-app-secret` | Secret | `APP_KEY` (generated idempotently) + app env |
 | `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task |
 | `cividash-migrate` | Job | `php artisan migrate --force`, runs before workloads |
@@ -78,7 +80,14 @@ inv_addons:
     admin_host: "dashboard.{{ DOMAIN }}"
     oidc_client_id: "cividash"
     replicas: { web: 2, fpm: 2 }
-    db: { database: "cividash", username: "cividash", storage: "5Gi" }
+    # External PostgreSQL connection. host + password are REQUIRED and must come
+    # from your VAULTED inventory; database/username/port default in vars/default.yml.
+    db:
+      host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED
+      port: 5432
+      database: "cividash"
+      username: "cividash"
+      # password: "..."  # REQUIRED, supply via vaulted inventory
     civitas_api_url: "https://api.{{ DOMAIN }}"
     s3:
       endpoint: "https://s3.{{ DOMAIN }}"
@@ -94,10 +103,18 @@ inv_addons:
 The following keys have no default and **must** be supplied via your (vaulted)
 platform inventory. The deploy asserts their presence and fails fast otherwise:
 
+- `inv_addons.cividash.db.host` — hostname of the externally provisioned
+  PostgreSQL, rendered into `cividash-db-secret` as `DB_HOST`.
+- `inv_addons.cividash.db.password` — PostgreSQL password, rendered into
+  `cividash-db-secret` as `DB_PASSWORD`.
 - `inv_addons.cividash.s3.access_key_id` — S3 access key, rendered into
   `cividash-app-secret` as `AWS_ACCESS_KEY_ID`.
 - `inv_addons.cividash.s3.secret_access_key` — S3 secret key, rendered into
   `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`.
+
+`db.port` (default `5432`), `db.database` (default `cividash`) and `db.username`
+(default `cividash`) are optional and fall back to the defaults in
+[`vars/default.yml`](vars/default.yml).
 
 ## Execute
 
@@ -127,29 +144,33 @@ APISIX never consumes this client.
 > manually. The add-on creates the client roles (`admin`, `editor`) but does
 > not assign them to any user.
 
-## R1 — MariaDB is not a CORE-native convention
+## R1 — Database (resolved): external PostgreSQL
 
-The dashboard requires **MariaDB**, deployed here as its own `cividash-db`
-StatefulSet + PVC. **This is not a documented CORE convention**: CORE is
-Postgres-only via the Zalando Postgres operator. This MariaDB is provided as a
-**raw StatefulSet + PVC with no operator, no managed backups, and no Velero
-integration** — none of that is faked. This is an open policy question to raise
-with the CORE team; **Postgres is the documented alternative**.
+**Resolved.** Earlier revisions of this add-on bundled its own **MariaDB**
+`cividash-db` StatefulSet + PVC, which was **not** a CORE-native convention (CORE is
+Postgres-only via the Zalando Postgres operator) and shipped with no operator,
+no managed backups and no Velero integration.
 
-### Manual MariaDB backup
+The dashboard application is **database-agnostic** — it reads the standard
+Laravel connection env (`DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
+`DB_USERNAME`, `DB_PASSWORD`) and the production image already bundles the
+`pdo_pgsql` driver. The add-on therefore now targets **PostgreSQL**, the
+CORE-native database, and **no longer runs a database server itself**. It only
+renders the connection Secret (`cividash-db-secret`) from the role vars and connects
+to an externally provisioned Postgres. This mirrors the main-repo switch to
+PostgreSQL and closes the open policy question.
 
-Because there is no operator-managed backup, take backups manually, e.g.:
+### Provisioning the PostgreSQL (out of scope for the add-on)
 
-```bash
-# Dump (adjust namespace/secret as needed)
-kubectl -n "$NS" exec statefulset/cividash-db -- \
-  sh -c 'mariadb-dump -u root -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"' \
-  > "cividash-$(date +%F).sql"
+The Postgres instance/database is provided by the operator / CORE. The add-on is
+agnostic to the topology — any option works as long as
+`db.{host,port,database,username,password}` are supplied:
 
-# Restore
-kubectl -n "$NS" exec -i statefulset/cividash-db -- \
-  sh -c 'mariadb -u root -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"' \
-  < cividash-backup.sql
-```
+1. **Dedicated Zalando `postgresql` cluster** in the CORE cluster (operator-managed
+   backups, HA). Point `db.host` at its Service.
+2. **`preparedDatabases` schema + role in the central CORE Postgres** — a
+   database/role carved out of the shared cluster. Point `db.host` at the shared
+   endpoint and `db.database`/`db.username` at the prepared database/role.
 
-Schedule these (CronJob / external backup runner) and store dumps off-cluster.
+retention are handled by whichever Postgres the operator provisions, not by this
+add-on.
