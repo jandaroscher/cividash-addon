@@ -30,9 +30,21 @@ all:
             admin_host: "dashboard.{{ DOMAIN }}"
 
             # --- Keycloak ---------------------------------------------------
-            # Client used by the APP (not by APISIX): Socialite admin SSO
-            # (standard flow) + client-credentials for the NGSI-LD token.
+            # cividash client, used by the APP (not by APISIX) for the
+            # Socialite admin SSO standard flow ONLY. The NGSI-LD machine token
+            # is issued by the shared operator-provided "api-access" client,
+            # not by this client (see ngsi_ld_roles below).
             oidc_client_id: "{{ IDM_CLIENT_CIVIDASH | default('cividash') }}"
+            # NGSI-LD machine token (CIVITAS_OAUTH_*) is fetched automatically
+            # from the platform's existing "api-access" IDM client — the same
+            # client the CORE data plane (Stellio behind APISIX) already trusts,
+            # mirroring redpandaconnect_addon. No manual token management. The
+            # add-on ensures the api-access service account carries these
+            # purpose-scoped client roles, which make Keycloak mint the
+            # api:read/api:write scopes the CORE APISIX gateway enforces. The
+            # CiviDash backend both reads and writes NGSI-LD, hence both by default.
+            # Override only to narrow the granted access.
+            # ngsi_ld_roles: ["dataConsumer", "dataProducer"]
             # In-cluster Keycloak URL for the SSO callback's server-side token
             # exchange (avoids needing the platform CA in the app trust store).
             # Defaults to the CORE Keycloak service "idmkeycloak.<env>-access-stack";

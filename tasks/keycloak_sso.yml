@@ -10,13 +10,21 @@
 #      idempotently (tolerate 201 created / 409 already-exists).
 #   4. Fetch the generated client-secret.
 #   5. Create the client roles "admin" + "editor".
-#   6. Write the Secret cividash-oidc-secret in "{{ k8s_namespace }}" with the
-#      keys the CIVIDASH app env expects (KEYCLOAK_* for Socialite admin SSO and
-#      CIVITAS_OAUTH_* for the NGSI-LD client-credentials machine token).
+#   6. Provision the NGSI-LD machine token on the shared, operator-provided
+#      "api-access" IDM client — NOT on our own cividash client:
+#        a. fetch the api-access client-secret via the shared helper
+#           tasks/templates/keycloak_client_secret.yaml,
+#        b. ensure the purpose-scoped client roles (dataConsumer/dataProducer)
+#           that make Keycloak mint the api:read/api:write scopes the CORE
+#           APISIX gateway enforces in front of the NGSI-LD broker (Stellio),
+#        c. assign those roles to api-access's service account (idempotent).
+#   7. Write the Secret cividash-oidc-secret in "{{ k8s_namespace }}" with the
+#      keys the CiviDash app env expects (KEYCLOAK_* for Socialite admin SSO from
+#      the cividash client, and CIVITAS_OAUTH_* for the NGSI-LD
+#      client-credentials machine token from the shared api-access client).
 #
-# Per CONTRACT decision 3: APISIX does NOT consume this client. The app uses it
-# for (a) Socialite admin SSO (Authorization-Code) and (b) client-credentials
-# for the NGSI-LD machine token. Admin auth is enforced by the app, not APISIX.
+# APISIX does NOT consume the cividash client: admin auth is enforced by the
+# redpandaconnect_addon's FROST OAuth2 wiring.
 # ---------------------------------------------------------------------------
 
 # prepare variables and login to keycloak
@@ -139,10 +147,94 @@
     - {role: "editor"}
 
 # ---------------------------------------------------------------------------
+# NGSI-LD machine token via the shared platform "api-access" client.
+#
+# The NGSI-LD client-credentials machine token is not issued by our own
+# cividash client. We reuse the operator-provided shared api-access
+# IDM client — the same client the CORE data plane (Stellio behind APISIX)
+# already trusts — exactly as redpandaconnect_addon does for FROST.
+#
+# The shared helper below performs its own Keycloak admin login and registers
+# `keycloak_login`, resolves the client to `id_of_client`, and fetches its
+# `client_secret`. Those three facts feed the role-provisioning tasks and the
+# CIVITAS_OAUTH_* keys in cividash-oidc-secret.
+# ---------------------------------------------------------------------------
+- name: "Get Keycloak client secret for the shared api-access client"
+  include_tasks: tasks/templates/keycloak_client_secret.yaml
+  vars:
+    module: "CiviDash"
+    client_id: "{{ IDM_CLIENT.API_ACCESS }}"
+
+- name: "Set api-access NGSI-LD OAuth2/Keycloak facts"
+  set_fact:
+    _cividash_api_access_client_id: "{{ IDM_CLIENT.API_ACCESS }}"
+    _cividash_api_access_client_secret: "{{ client_secret }}"
+  no_log: true  # api-access client-secret
+
+# The dataConsumer/dataProducer client roles make Keycloak issue the
+# api:read/api:write scopes the CORE APISIX gateway enforces in front of the
+# NGSI-LD context broker (Stellio). The CiviDash backend both reads and writes
+# NGSI-LD entities, so it needs both by default. Override via
+# inv_addons.cividash.ngsi_ld_roles if a deployment needs a narrower set.
+# (Convention adopted from redpandaconnect_addon, which uses the same two roles
+# to obtain the CORE api:read/api:write scopes; see the keep-in-sync note in docs/authentication.md.)
+- name: "Determine required api-access scope roles for the NGSI-LD machine token"
+  set_fact:
+    _cividash_ngsi_ld_roles: "{{ inv_addons.cividash.ngsi_ld_roles | default(['dataConsumer', 'dataProducer']) }}"
+
+- name: "Ensure NGSI-LD scope client roles exist on api-access (idempotent)"
+  uri:
+    method: POST
+    url: "{{ inv_access.platform.hostname }}/admin/realms/{{ inv_access.tenant.realm_name }}/clients/{{ id_of_client }}/roles"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    body_format: json
+    body:
+      name: "{{ item }}"
+      description: "Managed by cividash_addon for the NGSI-LD machine token (api:read/api:write scopes)."
+    headers:
+      Authorization: "Bearer {{ keycloak_login.json.access_token }}"
+    status_code: [201, 409]
+  loop: "{{ _cividash_ngsi_ld_roles }}"
+
+- name: "Get api-access service account user id"
+  uri:
+    method: GET
+    url: "{{ inv_access.platform.hostname }}/admin/realms/{{ inv_access.tenant.realm_name }}/users?username=service-account-{{ IDM_CLIENT.API_ACCESS }}&exact=true"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    headers:
+      Authorization: "Bearer {{ keycloak_login.json.access_token }}"
+    status_code: 200
+  register: _cividash_api_access_service_account
+
+- name: "Get definitions of the NGSI-LD scope roles to assign"
+  uri:
+    method: GET
+    url: "{{ inv_access.platform.hostname }}/admin/realms/{{ inv_access.tenant.realm_name }}/clients/{{ id_of_client }}/roles/{{ item }}"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    headers:
+      Authorization: "Bearer {{ keycloak_login.json.access_token }}"
+    status_code: 200
+  register: _cividash_role_defs
+  loop: "{{ _cividash_ngsi_ld_roles }}"
+
+- name: "Assign NGSI-LD scope roles to the api-access service account (idempotent)"
+  uri:
+    method: POST
+    url: "{{ inv_access.platform.hostname }}/admin/realms/{{ inv_access.tenant.realm_name }}/users/{{ _cividash_api_access_service_account.json[0].id }}/role-mappings/clients/{{ id_of_client }}"
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    body_format: json
+    body: "{{ [item.json] }}"
+    headers:
+      Authorization: "Bearer {{ keycloak_login.json.access_token }}"
+    status_code: 204
+  loop: "{{ _cividash_role_defs.results }}"
+
+# ---------------------------------------------------------------------------
 # Persist the resolved OIDC credentials into cividash-oidc-secret. The CiviDash app env
 # (loaded by the chart workloads via envFrom secretRef) sources these keys for both the
-# Socialite admin SSO (KEYCLOAK_*) and the NGSI-LD client-credentials machine
-# token (CIVITAS_OAUTH_*). APISIX does NOT consume this secret.
+# Socialite admin SSO (KEYCLOAK_* — from the cividash client) and the
+# NGSI-LD client-credentials machine token (CIVITAS_OAUTH_* — from the shared
+# api-access client). APISIX does NOT consume this secret.
 # ---------------------------------------------------------------------------
 - name: Create cividash-oidc-secret
   kubernetes.core.k8s:
@@ -176,9 +268,12 @@
         KEYCLOAK_CLIENT_SECRET: "{{ IDM_CLIENT_SECRET_CIVIDASH | b64encode }}"
         KEYCLOAK_REDIRECT_URI: "{{ ('https://' + (inv_addons.cividash.admin_host | default(inv_addons.cividash.public_host)) + '/admin/auth/keycloak/callback') | b64encode }}"
         # --- CIVITAS NGSI-LD machine token (OAuth client-credentials) ---
+        # Issued by the shared, operator-provided api-access client,
+        # NOT by cividash. Same realm token endpoint; the client-id/secret
+        # come from the shared keycloak_client_secret.yaml helper above.
         CIVITAS_OAUTH_TOKEN_URL: "{{ (inv_access.platform.hostname + '/realms/' + inv_access.tenant.realm_name + '/protocol/openid-connect/token') | b64encode }}"
-        CIVITAS_OAUTH_CLIENT_ID: "{{ IDM_CLIENT_CIVIDASH | b64encode }}"
-        CIVITAS_OAUTH_CLIENT_SECRET: "{{ IDM_CLIENT_SECRET_CIVIDASH | b64encode }}"
+        CIVITAS_OAUTH_CLIENT_ID: "{{ _cividash_api_access_client_id | b64encode }}"
+        CIVITAS_OAUTH_CLIENT_SECRET: "{{ _cividash_api_access_client_secret | b64encode }}"
   no_log: true  # secret payload — KEYCLOAK_* + CIVITAS client-credentials
   when:
     - not ansible_check_mode

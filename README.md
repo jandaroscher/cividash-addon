@@ -133,11 +133,34 @@ plugin** on this route. It covers `/`, `/api/*`, `/admin`, `/filament` and
 The add-on still registers a Keycloak client (`cividash`) because the
 **app** uses it, not APISIX, for admin SSO: the Socialite standard flow with
 redirect `https://{{ admin_host | default(public_host) }}/admin/auth/keycloak/callback`.
-2. **Client credentials** — service account for the machine-to-machine NGSI-LD
-   token (`CIVITAS_DRIVER=ngsi-ld`).
 
-The client secret is written to `cividash-oidc-secret` and consumed via app env.
-APISIX never consumes this client.
+The `cividash` client secret is written to `cividash-oidc-secret` (as the
+`KEYCLOAK_*` keys) and consumed via app env. APISIX never consumes this client.
+
+### NGSI-LD machine token — shared `api-access` client
+
+The machine-to-machine NGSI-LD token (`CIVITAS_DRIVER=ngsi-ld`,
+`CIVITAS_OAUTH_*` in `cividash-oidc-secret`) is **no longer** issued by the
+`cividash` client. It is issued by the shared, operator-provided
+**`api-access`** IDM client — the same client the CORE data plane (Stellio
+behind APISIX) already trusts — mirroring `redpandaconnect_addon`'s FROST
+OAuth2 wiring. `tasks/keycloak_sso.yml`:
+
+1. fetches the `api-access` client-secret via the shared platform helper
+   `tasks/templates/keycloak_client_secret.yaml` (`client_id: IDM_CLIENT.API_ACCESS`);
+2. ensures the purpose-scoped client roles (`dataConsumer` / `dataProducer`,
+   overridable via `inv_addons.cividash.ngsi_ld_roles`) that make Keycloak
+   mint the `api:read` / `api:write` scopes the CORE APISIX gateway enforces;
+3. assigns those roles to the `api-access` service account (idempotent).
+
+The `cividash` client has `serviceAccountsEnabled: false`; it only carries the
+auth-code SSO flow and its audience mapper.
+
+> **Platform dependency:** `IDM_CLIENT.API_ACCESS` and the shared task
+> `tasks/templates/keycloak_client_secret.yaml` are provided by the CORE
+> control plane at run time (not vendored in this add-on), exactly as
+> `redpandaconnect_addon` relies on them. Keep the `dataConsumer`/`dataProducer`
+> convention in sync with the platform's api:read/api:write scope mapping.
 
 > **Note:** If Filament admin access is gated on a Keycloak role/group, the
 > first admin must be granted the `cividash:admin` role in Keycloak

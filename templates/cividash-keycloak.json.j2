@@ -1,10 +1,11 @@
 {# ---------------------------------------------------------------------------
    Keycloak client JSON for the cividash add-on.
 
-   The CIVIDASH Laravel/Filament app consumes this client for TWO purposes
    https://<admin_host|public_host>/admin/auth/keycloak/callback. APISIX does
    not consume this client; admin auth is enforced by the app.
-     (b) NGSI-LD machine token -> client-credentials (serviceAccountsEnabled)
+
+   The NGSI-LD machine token is not issued by this client: it
+   comes from the shared operator-provided "api-access" client, provisioned in
 
    Confidential client (publicClient=false, client-secret authenticator).
    Direct access grants (password grant) are intentionally disabled.
@@ -15,7 +16,7 @@
 {
     "clientId": "{{ cividash_oidc_client_id }}",
     "name": "CiviDash",
-    "description": "This client was created by ansible (cividash add-on). Used by the CIVIDASH app for Socialite admin SSO (auth-code) and the NGSI-LD machine token (client-credentials).",
+    "description": "This client was created by ansible (cividash add-on). Used by the CiviDash app for Socialite admin SSO (auth-code). The NGSI-LD machine token is issued by the shared api-access client.",
     "rootUrl": "https://{{ inv_addons.cividash.admin_host | default(inv_addons.cividash.public_host) }}",
     "baseUrl": "https://{{ inv_addons.cividash.admin_host | default(inv_addons.cividash.public_host) }}/admin",
     "adminUrl": "https://{{ inv_addons.cividash.admin_host | default(inv_addons.cividash.public_host) }}",
@@ -35,7 +36,7 @@
     "standardFlowEnabled": true,
     "implicitFlowEnabled": false,
     "directAccessGrantsEnabled": false,
-    "serviceAccountsEnabled": true,
+    "serviceAccountsEnabled": false,
     "publicClient": false,
     "frontchannelLogout": false,
     "protocol": "openid-connect",
