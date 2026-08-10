@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track ghcr.io/jandaroscher/cividash-app + cividash-web images declared in vars/software_references.yml. Images are published by the CIVIDASH main repo onto the moving 'civitas' tag (no semver), so pinDigests above is what makes Renovate open PRs here: it pins civitas@sha256:... and re-opens a PR whenever that digest changes.",
+      "managerFilePatterns": [
+        "/^vars/software_references\\.yml$/"
+      ],
+      "matchStrings": [
+        "registry:\\s*\"(?<registryUrl>[^\"]+)\"\\s*\\n\\s*repository:\\s*\"(?<depName>[^\"]+)\"\\s*\\n\\s*tag:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "registryUrlTemplate": "https://{{{registryUrl}}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "jandaroscher/cividash-app",
+        "jandaroscher/cividash-web"
+      ],
+      "groupName": "CiviDash add-on images"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "jandaroscher/cividash-app",
+        "jandaroscher/cividash-web"
+      ],
+      "matchCurrentValue": "/^civitas-/",
+      "enabled": false
+    }
+  ]
+}
