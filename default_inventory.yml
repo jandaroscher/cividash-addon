@@ -45,6 +45,19 @@ all:
             # CiviDash backend both reads and writes NGSI-LD, hence both by default.
             # Override only to narrow the granted access.
             # ngsi_ld_roles: ["dataConsumer", "dataProducer"]
+            # OAuth scope the app's NgsiLdClient requests for the NGSI-LD machine
+            # token (written to cividash-oidc-secret as CIVITAS_OAUTH_SCOPE) and the
+            # scope the deploy-time M2M preflight requests. Must match the scopes
+            # the CORE APISIX gateway enforces in front of Stellio.
+            ngsi_ld_scope: "api:read api:write"
+            # Deploy-time M2M preflight (tasks/preflight_m2m.yml): after
+            # keycloak_sso, verify the shared api-access client can mint a USABLE
+            # NGSI-LD token — serviceAccountsEnabled=true (a token is issued) and
+            # a non-empty "tenants" claim (Stellio grants tenant access). Both
+            # are OPERATOR provisioning prerequisites (see README "Operator
+            # prerequisites (M2M / api-access)"); the add-on only probes them and
+            # fails loudly. Set false to consciously skip the check.
+            m2m_preflight_enabled: true
             # In-cluster Keycloak URL for the SSO callback's server-side token
             # exchange (avoids needing the platform CA in the app trust store).
             # Defaults to the CORE Keycloak service "idmkeycloak.<env>-access-stack";

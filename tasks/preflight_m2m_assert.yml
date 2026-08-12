@@ -1,0 +1,65 @@
+---
+# ---------------------------------------------------------------------------
+# Pure decode + assert logic for the M2M NGSI-LD preflight.
+#
+# Consumes two facts set by the caller and touches NO network:
+#   _cividash_m2m_token     - a `uri` result (needs .status and .json.access_token
+#                         on success; .json.error on a 4xx token error)
+#   _cividash_ngsi_ld_scope - the OAuth scope that was requested (for messages)
+#
+# Kept in its own file so dev/preflight-assert.test.yml can exercise the EXACT
+# parser/assert logic against a MOCKED token payload without a live Keycloak
+# (the must-fail proof). tasks/preflight_m2m.yml includes it after the real
+# client-credentials token request.
+# ---------------------------------------------------------------------------
+
+# (a) serviceAccountsEnabled=false (or the client is not an M2M client at all)
+#     -> Keycloak returns 401 unauthorized_client and never mints a token.
+- name: "M2M preflight: fail if api-access did not issue a token"
+  ansible.builtin.fail:
+    msg: >-
+      M2M preflight failed: the shared 'api-access' client did NOT issue a
+      client-credentials token (HTTP {{ _cividash_m2m_token.status }},
+      error='{{ _cividash_m2m_token.json.error | default('n/a') }}'). This is an
+      OPERATOR provisioning prerequisite, not an add-on bug: 'api-access' must
+      be provisioned as an M2M client (serviceAccountsEnabled=true) and permit
+      the '{{ _cividash_ngsi_ld_scope }}' scope. The add-on deliberately does NOT
+      flip serviceAccountsEnabled itself (mirrors redpandaconnect_addon). See
+      README "Operator prerequisites (M2M / api-access)".
+  when: _cividash_m2m_token.status != 200
+
+# Decode the JWT claims: split on '.', take the middle (payload) segment and
+# base64url-decode it. base64url uses '-'/'_' and drops padding, so translate
+# the alphabet and re-pad to a multiple of 4 before b64decode.
+- name: "M2M preflight: extract the JWT payload segment"
+  ansible.builtin.set_fact:
+    _cividash_m2m_payload_seg: "{{ _cividash_m2m_token.json.access_token.split('.')[1] }}"
+  no_log: true  # part of the access token
+
+- name: "M2M preflight: decode the access-token claims (base64url payload)"
+  ansible.builtin.set_fact:
+    _cividash_m2m_claims: >-
+      {{ ((_cividash_m2m_payload_seg | replace('-', '+') | replace('_', '/'))
+          + '=' * ((4 - (_cividash_m2m_payload_seg | length) % 4) % 4))
+         | b64decode | from_json }}
+  no_log: true  # decoded token claims
+
+# (b) The api-access service account is in no tenant group -> the 'tenants'
+#     claim is empty -> Stellio rejects ("no access to tenant ds_open_data").
+- name: "M2M preflight: fail if the tenants claim is empty"
+  ansible.builtin.fail:
+    msg: >-
+      M2M preflight failed: the api-access access-token carries an EMPTY
+      'tenants' claim. Stellio will reject NGSI-LD requests ("no access to
+      tenant ds_open_data"). This is an OPERATOR provisioning prerequisite: the
+      'api-access' service account must be a member of the tenant group (e.g.
+      'ds_open_data') with the SPI-read attributes, so Keycloak populates the
+      'tenants' claim. See README "Operator prerequisites (M2M / api-access)".
+  when: (_cividash_m2m_claims.tenants | default([])) | length == 0
+
+- name: "M2M preflight: OK"
+  ansible.builtin.debug:
+    msg: >-
+      M2M preflight OK: 'api-access' issued a client-credentials token for
+      scope '{{ _cividash_ngsi_ld_scope }}' with a non-empty tenants claim
+      ({{ (_cividash_m2m_claims.tenants | default([])) | length }} tenant(s)).

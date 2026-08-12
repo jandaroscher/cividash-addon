@@ -1,0 +1,45 @@
+---
+# =============================================================================
+# Isolated must-fail proof for the M2M preflight assert logic
+# (tasks/preflight_m2m_assert.yml). It builds a MOCKED api-access token result
+# and runs the REAL decode + assert task file against it — no live Keycloak, no
+# cluster. This exercises the exact base64url-decode + tenants-claim assertion
+# the deploy runs.
+#
+#   ansible-playbook dev/preflight-assert.test.yml -e case=empty  # MUST FAIL (red)
+#   ansible-playbook dev/preflight-assert.test.yml -e case=ok     # MUST PASS (green)
+#
+#   case=empty : tenants claim []                        -> preflight rejects
+#                (Stellio would deny: "no access to tenant ...").
+#   case=ok    : tenants [{name: ds_open_data}] + scopes -> preflight passes.
+#
+# The mocked JWTs are unsigned "header.<payload>.sig" strings; the assert logic
+# only reads the middle (payload) segment. Padding is stripped so the decoder's
+# base64url re-padding path is actually exercised.
+# =============================================================================
+- name: "M2M preflight — isolated assert proof (mocked token payload)"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    case: ok
+    addon_dir: "{{ playbook_dir }}/../"
+    _cividash_ngsi_ld_scope: "api:read api:write"
+    _mock_payloads:
+      empty: >-
+        {{ ({'scope': 'api:read api:write', 'tenants': []}
+            | to_json | b64encode) | regex_replace('=+$', '') }}
+      ok: >-
+        {{ ({'scope': 'api:read api:write',
+             'tenants': [{'name': 'ds_open_data'}]}
+            | to_json | b64encode) | regex_replace('=+$', '') }}
+  tasks:
+    - name: "Build a mocked api-access token result for case '{{ case }}'"
+      ansible.builtin.set_fact:
+        _cividash_m2m_token:
+          status: 200
+          json:
+            access_token: "header.{{ _mock_payloads[case] }}.sig"
+
+    - name: "Run the REAL preflight assert logic against the mock"
+      ansible.builtin.include_tasks: "{{ addon_dir }}tasks/preflight_m2m_assert.yml"

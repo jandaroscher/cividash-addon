@@ -167,6 +167,38 @@ auth-code SSO flow and its audience mapper.
 > manually. The add-on creates the client roles (`admin`, `editor`) but does
 > not assign them to any user.
 
+### Operator prerequisites (M2M / api-access)
+
+The NGSI-LD machine token rides on the shared `api-access` client, which the
+**operator** owns and provisions — the add-on does not create it and, mirroring
+`redpandaconnect_addon`, deliberately does **not** enable service accounts or
+edit group membership on it. For the M2M flow to actually work, `api-access`
+must be provisioned so that:
+
+1. **`serviceAccountsEnabled = true`** — otherwise Keycloak mints **no**
+   client-credentials token at all (`401 unauthorized_client`).
+2. The **`api:read` / `api:write`** scopes are requestable by the client (these
+   are the scopes the CORE APISIX gateway enforces in front of Stellio). The
+   add-on requests them via `CIVITAS_OAUTH_SCOPE` (default `api:read api:write`,
+   override with `inv_addons.cividash.ngsi_ld_scope`).
+3. The **`api-access` service account is a member of the tenant group** (e.g.
+   `ds_open_data`) with the SPI-read attributes, so the issued token carries a
+   non-empty **`tenants`** claim. With an empty claim Stellio refuses every
+   request (`no access to tenant ds_open_data`) even though a token was minted.
+
+**Deploy-time preflight.** [`tasks/preflight_m2m.yml`](tasks/preflight_m2m.yml)
+runs right after `keycloak_sso.yml` and verifies (1)–(3) against the live realm
+before any workloads are deployed: it requests a client-credentials token for
+the api-access client and asserts both that a token is issued and that its
+`tenants` claim is non-empty. On failure it stops the deploy with a message
+naming the missing operator step above, instead of shipping a dashboard that
+cannot reach Stellio. Skip the check consciously with
+`inv_addons.cividash.m2m_preflight_enabled: false`.
+
+The pure decode/assert logic ([`tasks/preflight_m2m_assert.yml`](tasks/preflight_m2m_assert.yml))
+is proved in isolation against mocked token payloads by
+[`dev/preflight-assert.test.yml`](dev/preflight-assert.test.yml).
+
 ## R1 — Database (resolved): external PostgreSQL
 
 **Resolved.** Earlier revisions of this add-on bundled its own **MariaDB**

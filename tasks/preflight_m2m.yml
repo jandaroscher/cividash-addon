@@ -1,0 +1,48 @@
+---
+# ---------------------------------------------------------------------------
+# Deploy-time M2M preflight for the shared "api-access" NGSI-LD token
+# Runs AFTER tasks/keycloak_sso.yml, which sets the facts
+# `_cividash_api_access_client_id` / `_cividash_api_access_client_secret` and issues no
+# machine token itself.
+#
+# WHY: with a correctly provisioned api-access client the M2M flow works
+# (gateway trust + api:read/api:write scopes). But when the
+# OPERATOR has not M2M-provisioned api-access, the deploy would still complete
+# and silently produce an unusable token:
+#   (a) serviceAccountsEnabled=false -> no token is minted at all, or
+#   (b) the api-access service account is in no tenant group -> the "tenants"
+#       claim is empty -> Stellio refuses ("no access to tenant ds_open_data").
+# Both are operator provisioning steps, NOT add-on code. This
+# preflight only PROBES them and fails loudly with an actionable message; it
+# never flips serviceAccountsEnabled or edits group membership itself (the same
+# stance redpandaconnect_addon takes).
+#
+# Gate: skip via inv_addons.cividash.m2m_preflight_enabled: false.
+# ---------------------------------------------------------------------------
+
+- name: "M2M preflight: resolve the NGSI-LD OAuth scope to request"
+  ansible.builtin.set_fact:
+    _cividash_ngsi_ld_scope: "{{ inv_addons.cividash.ngsi_ld_scope | default('api:read api:write') }}"
+
+# Same realm token endpoint, ca_path and body_format as the keycloak_sso block.
+# We tolerate the 4xx token-error codes so the assert task can raise a targeted
+# operator message instead of a raw uri failure.
+- name: "M2M preflight: request a client-credentials token from api-access"
+  check_mode: false
+  ansible.builtin.uri:
+    method: POST
+    url: "{{ inv_access.platform.hostname }}/realms/{{ inv_access.tenant.realm_name }}/protocol/openid-connect/token"
+    return_content: true
+    body_format: form-urlencoded
+    ca_path: "{{ inv_k8s.ingress.ca_path }}"
+    body:
+      grant_type: "client_credentials"
+      client_id: "{{ _cividash_api_access_client_id }}"
+      client_secret: "{{ _cividash_api_access_client_secret }}"
+      scope: "{{ _cividash_ngsi_ld_scope }}"
+    status_code: [200, 400, 401, 403]
+  register: _cividash_m2m_token
+  no_log: true  # client-secret in body + access token in response
+
+- name: "M2M preflight: verify the api-access token (decode + assert)"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/preflight_m2m_assert.yml' }}"

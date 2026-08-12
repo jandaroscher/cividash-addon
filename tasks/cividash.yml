@@ -129,6 +129,17 @@
   ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/keycloak_sso.yml' }}"
   tags: ["addons", "addon_cividash"]
 
+# 3b) M2M preflight: with the api-access facts from keycloak_sso in hand, verify
+#     the shared api-access client can actually mint a USABLE NGSI-LD machine
+#     token (serviceAccountsEnabled + non-empty tenants claim) BEFORE we deploy
+#     workloads. These are OPERATOR provisioning prerequisites the add-on only
+#     probes — it fails loudly rather than deploying a dashboard that cannot
+#     reach Stellio. Skip with m2m_preflight_enabled: false.
+- name: "CiviDash: M2M preflight (api-access NGSI-LD token check)"
+  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/preflight_m2m.yml' }}"
+  when: inv_addons.cividash.m2m_preflight_enabled | default(true)
+  tags: ["addons", "addon_cividash"]
+
 # 4) Migrate: run `php artisan migrate --force` as a Job and wait for it to
 #    complete before bringing up the workloads.
 - name: "CIVIDASH Civitas: Run database migrations"
