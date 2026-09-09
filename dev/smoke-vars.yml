@@ -54,8 +54,6 @@ inv_addons:
       region: "us-east-1"
 
 inv_k8s:
-  storage_class:
-    loc: "standard"            # kind's default local-path StorageClass
   ingress_class: "nginx"
   cert_manager:
     issuer_name: "selfsigned"

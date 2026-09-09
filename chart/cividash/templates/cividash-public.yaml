@@ -1,0 +1,39 @@
+{{/*
+Public Ingress: values.app.publicHost -> Service cividash-web:80.
+This route is OPEN — no auth/openid-connect annotations. The
+Laravel/Filament app enforces its own authentication.
+*/}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cividash-public
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-web
+  annotations:
+    {{- if .Values.ingress.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
+    kubernetes.io/tls-acme: "true"
+    {{- end }}
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.ingress.sslRedirect | quote }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  tls:
+    - hosts:
+        - {{ required "app.publicHost is required when ingress.enabled is true" .Values.app.publicHost | quote }}
+      secretName: {{ default (printf "%s-tls" .Values.app.publicHost) .Values.ingress.tlsSecretName | quote }}
+  rules:
+    - host: {{ .Values.app.publicHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cividash-web
+                port:
+                  number: 80
+{{- end }}

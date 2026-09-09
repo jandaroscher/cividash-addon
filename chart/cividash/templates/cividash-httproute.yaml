@@ -1,0 +1,26 @@
+{{/*
+Gateway API alternative to the Ingress in cividash-public.yaml, for platforms routing via a
+shared Gateway rather than an ingress-nginx controller. Same target: the
+values.app.publicHost host -> cividash-web:80.
+*/}}
+{{- if .Values.gatewayApi.enabled }}
+{{- if not .Values.gatewayApi.parentRefs }}
+{{- fail "gatewayApi.parentRefs must list at least one Gateway when gatewayApi.enabled is true" }}
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cividash-public
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-web
+spec:
+  parentRefs:
+    {{- toYaml .Values.gatewayApi.parentRefs | nindent 4 }}
+  hostnames:
+    - {{ required "app.publicHost is required when gatewayApi.enabled is true" .Values.app.publicHost | quote }}
+  rules:
+    - backendRefs:
+        - name: cividash-web
+          port: 80
+{{- end }}

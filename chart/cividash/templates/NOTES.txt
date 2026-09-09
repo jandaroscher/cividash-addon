@@ -1,0 +1,18 @@
+cividash deployed as {{ .Release.Name }} in {{ .Release.Namespace }}.
+
+{{- if .Values.ingress.enabled }}
+Public URL: https://{{ .Values.app.publicHost }}
+{{- else if .Values.gatewayApi.enabled }}
+Public URL (via Gateway API): https://{{ .Values.app.publicHost }}
+{{- else }}
+No public route enabled (ingress.enabled=false, gatewayApi.enabled=false).
+{{- end }}
+
+Health check: cividash-fpm and cividash-web readiness probes; app health at GET /up
+via the cividash-web Service.
+
+Note: cividash-app-secret and cividash-db-secret are Helm hook resources, not tracked
+in the release manifest. `helm uninstall` leaves them behind; delete them
+explicitly when decommissioning. cividash-oidc-secret is written by the Ansible
+SSO task, not Helm, and must be deleted too:
+  kubectl -n {{ .Release.Namespace }} delete secret cividash-app-secret cividash-db-secret cividash-oidc-secret

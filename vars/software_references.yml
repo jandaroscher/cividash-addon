@@ -26,6 +26,16 @@
 ---
 software:
   addon_cividash:
+    # Local chart (no helm_repo_name/url): tasks/cividash.yml passes
+    # helm_chart_reference: "{{ playbook_dir }}/{{ addon_dir }}chart/cividash"
+    # and does NOT
+    # forward helm_chart_version to the k8s-helm.yml wrapper, so its
+    # "local chart" branch runs (helm_chart_version and helm_repo_name both
+    # undefined). helm_chart_version here is metadata for humans/tooling only.
+    helm_chart_name: "cividash"
+    helm_release_name: "cividash"
+    helm_chart_version: "1.6.1"
+
     # php-fpm image: the full Laravel/Filament application.
     cividash_app:
       registry: "ghcr.io"

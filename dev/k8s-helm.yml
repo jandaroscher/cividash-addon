@@ -1,0 +1,21 @@
+---
+# =============================================================================
+# Vendored copy of core_platform/tasks/templates/k8s-helm.yml's "local chart"
+# branch (helm_chart_version and helm_repo_name both undefined), for the kind
+# smoke — which has no CORE checkout to include the real wrapper from. Keep in
+# sync with the CORE wrapper if its local-chart branch changes.
+# See dev/README.md for why this is vendored rather than pointing
+# `playbook_dir` at the CORE repo.
+# =============================================================================
+- name: "K8S {{ helm_release_name }}: Create helm installation from local chart"
+  check_mode: false
+  no_log: "{{ helm_no_log | default(true) }}"
+  kubernetes.core.helm:
+    name: "{{ helm_release_name }}"
+    chart_ref: "{{ helm_chart_reference }}"
+    kubeconfig: "{{ k8s_config }}"
+    context: "{{ k8s_context }}"
+    release_namespace: "{{ k8s_namespace }}"
+    update_repo_cache: false
+    create_namespace: "{{ helm_create_namespace }}"
+    values: "{{ lookup('template', helm_values_file) | from_yaml | combine(helm_values_rcombine | default({}), recursive=True) }}"

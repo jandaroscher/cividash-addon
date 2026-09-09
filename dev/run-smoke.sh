@@ -5,19 +5,32 @@
 # Spins up a throwaway kind cluster, loads the locally-built cividash-app/cividash-web
 # images, stands up a throwaway PostgreSQL (cividash-smoke-postgres, standing in for
 # the operator-provided external DB), deploys the add-on data-plane (fpm/web/
-# queue/scheduler + migrate Job) via the REAL role tasks, and pulls NGSI-LD data
+# queue/scheduler + migrate Job) via the Helm chart (dev/k8s-helm.yml, vendored
+# CORE local-chart branch), and pulls NGSI-LD data
 # from the local bare Stellio broker on the host (docker/civitas/v1.6.2, :8090).
 #
 # Keycloak/APISIX/Ingress are skipped (they need a full CORE control plane);
 # this proves the external-Postgres approach + the manifests work in a real cluster.
 #
-# Prereqs: kind, kubectl, ansible (+ `kubernetes` python lib), docker;
+# Prereqs: kind, kubectl, ansible (+ `kubernetes` python lib), docker, helm v3;
 #          images cividash-app:dev + cividash-web:dev built; Stellio reachable on :8090.
 #
 # Usage:   dev/run-smoke.sh           # deploy + verify
 #          dev/run-smoke.sh teardown  # delete the kind cluster
+#
+# HELM_BIN_DIR (optional): directory holding a helm v3 binary, prepended to
+# PATH if it exists (defaults to $HOME/.local/bin) — the
+# ansible.kubernetes.core.helm module shells out to `helm`, and a system helm
+# v4 breaks `helm list --all` (see dev/README.md). Point it at your
+# CIVITAS/CORE local checkout's vendored helm v3 if you use one.
 # =============================================================================
 set -euo pipefail
+
+HELM_BIN_DIR="${HELM_BIN_DIR:-$HOME/.local/bin}"
+if [[ -x "$HELM_BIN_DIR/helm" ]]; then
+  export PATH="$HELM_BIN_DIR:$PATH"
+fi
+echo "helm: $(command -v helm) ($(helm version --short 2>/dev/null || true))"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CLUSTER="cividash-smoke"
@@ -52,7 +65,7 @@ kind load docker-image "$APP_IMG" "$WEB_IMG" --name "$CLUSTER"
 GW="$(docker network inspect kind -f '{{range .IPAM.Config}}{{println .Gateway}}{{end}}' | grep -E '^[0-9]+\.' | head -1)"
 echo "kind gateway (host from pods): $GW"
 
-# 4) deploy via the real role tasks (secrets -> db -> migrate -> workloads)
+# 4) deploy via the Helm chart (dev/k8s-helm.yml): hook Secrets -> migrate Job -> workloads
 ansible-playbook "$HERE/smoke-playbook.yml" \
   -e "civitas_gateway_ip=$GW" \
   ${ANSIBLE_PY:+-e "ansible_python_interpreter=$ANSIBLE_PY"}

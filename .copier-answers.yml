@@ -8,4 +8,4 @@ _src_path: https://gitlab.com/civitas-connect/civitas-core/civitas-core-v1/addon
 addonName: CiviDash
 addonSlug: cividash
 addonStack: cividash
-helmInstall: false
+helmInstall: true

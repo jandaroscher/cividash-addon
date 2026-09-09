@@ -1,12 +1,37 @@
 # CiviDash CIVITAS/CORE Add-on
 
-Packages the **CIVIDASH** sustainability dashboard (Laravel 12 + Filament + a Vue 3
-SPA) as a **CIVITAS/CORE** add-on. This is a **deploy-only** repository: Ansible
-plus raw Kubernetes Jinja2 manifests (**no Helm chart**). The application code
-lives in the CIVIDASH main repository and ships here as prebuilt container images.
+Packages **CiviDash**, the sustainability dashboard (Laravel 12 + Filament +
+a Vue 3 SPA), as a **CIVITAS/CORE** add-on. This is a **deploy-only**
+repository: a local Helm chart ([`chart/cividash/`](chart/cividash/))
+installed through the central platform Helm task, plus `uri`-based Keycloak /
+APISIX Admin-API calls for SSO and gateway registration (outside Helm's
+scope). The application code lives in the
+on openCode at
 
-The add-on follows the `airflow_addon` pattern — raw `kubernetes.core.k8s`
-manifests and `uri`-based Keycloak / APISIX Admin-API calls — not a Helm chart.
+> **Breaking change:** the add-on now installs via Helm
+> (`helm_release_name: cividash`) instead of raw `kubernetes.core.k8s`
+> manifests. Existing deployments must be migrated once: `helm install` does
+> not adopt resources it didn't create, and the chart's Deployment selectors
+> now include `app.kubernetes.io/instance` (Kubernetes selectors are
+> immutable), so in-place adoption of the Deployments is not possible. Before
+> the first Helm run, delete only the non-Secret objects:
+> `kubectl -n <ns> delete --ignore-not-found=true deploy cividash-fpm cividash-web
+> cividash-queue cividash-scheduler svc cividash-fpm cividash-web ingress cividash-public
+> job cividash-migrate` (`--ignore-not-found` covers the Ingress when
+> `enable_ingress` was false and the migrate Job when it already finished).
+> Do **not** delete `cividash-app-secret` / `cividash-db-secret`: they are Helm hook
+> resources (`before-hook-creation`), so Helm deletes and recreates them
+> itself on the first run, and the chart's `lookup` preserves the existing
+> `APP_KEY` from `cividash-app-secret`. `cividash_db_*` role-var names were dropped in
+> favor of `inv_addons.cividash.db.*` read directly by the chart values
+> (no inventory change needed if you were already using `db.*`).
+>
+> Hook Secrets are also not part of the Helm release manifest: `helm
+> uninstall cividash --namespace <ns>` leaves `cividash-app-secret` and
+> `cividash-db-secret` behind, and `cividash-oidc-secret` (written by the SSO task)
+> is never removed by Helm either. Delete all three explicitly when
+> decommissioning:
+> `kubectl -n <ns> delete secret cividash-app-secret cividash-db-secret cividash-oidc-secret`.
 
 ## What it deploys
 
@@ -17,22 +42,20 @@ provisioned PostgreSQL** (see **R1**).
 
 | Object | Kind | Notes |
 | --- | --- | --- |
-| `cividash-db-secret` | Secret | External-Postgres connection (`DB_CONNECTION`/`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`), rendered from the role vars |
-| `cividash-app-secret` | Secret | `APP_KEY` (generated idempotently) + app env |
-| `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task |
-| `cividash-migrate` | Job | `php artisan migrate --force`, runs before workloads |
+| `cividash-db-secret` | Secret (Helm hook) | External-Postgres connection (`DB_CONNECTION`/`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`); `pre-install,pre-upgrade`, weight `0` |
+| `cividash-app-secret` | Secret (Helm hook) | `APP_KEY` (idempotent) + app env; `pre-install,pre-upgrade`, weight `0` |
+| `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task (NOT part of the chart — see **Helm chart** below) |
+| `cividash-migrate` | Job (Helm hook) | `php artisan migrate --force`; `pre-install,pre-upgrade`, weight `5` (after the two secrets above) |
 | `cividash-fpm` | Deployment + Service (9000) | php-fpm, the full Laravel/Filament app |
 | `cividash-web` | Deployment + Service (80) | nginx + baked public assets, `fastcgi_pass cividash-fpm:9000` |
 | `cividash-queue` | Deployment | `php artisan queue:work` |
 | `cividash-scheduler` | Deployment | loops `php artisan schedule:run` every 60s |
-| Ingress | Ingress | when `enable_ingress`, `public_host` -> `cividash-web` |
+| `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress`, `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
 | APISIX upstream + route | APISIX Admin API | open route `public_host` `/*` -> `cividash-web` (see **Admin auth**) |
 
 All pods run with a hardened pod-security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82). Per-pod writable paths
-are `emptyDir` mounts at `/var/www/html/storage/framework` and
-`/var/www/html/bootstrap/cache`. Media is stored on S3
+`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82). Media is stored on S3
 (`PUBLIC_DISK_DRIVER=s3`); sessions, cache and queue use the database; logs go
 to stderr.
 
@@ -81,7 +104,7 @@ inv_addons:
     oidc_client_id: "cividash"
     replicas: { web: 2, fpm: 2 }
     # External PostgreSQL connection. host + password are REQUIRED and must come
-    # from your VAULTED inventory; database/username/port default in vars/default.yml.
+    # from your VAULTED inventory; database/username/port default in the chart values.
     db:
       host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED
       port: 5432
@@ -114,7 +137,67 @@ platform inventory. The deploy asserts their presence and fails fast otherwise:
 
 `db.port` (default `5432`), `db.database` (default `cividash`) and `db.username`
 (default `cividash`) are optional and fall back to the defaults in
-[`vars/default.yml`](vars/default.yml).
+[`templates/values.yaml.j2`](templates/values.yaml.j2) / the chart's
+[`values.yaml`](chart/cividash/values.yaml).
+
+## Helm chart
+
+`tasks/cividash.yml` installs [`chart/cividash/`](chart/cividash/)
+through the central platform task `tasks/templates/k8s-helm.yml` (per
+guideline: Helm installs go through the central platform task, with chart
+metadata sourced exclusively from `vars/software_references.yml`).
+`helm_chart_name`, `helm_release_name` and `helm_chart_version` live in
+[`vars/software_references.yml`](vars/software_references.yml) under
+`software.addon_cividash`; no `helm_repo_name`/`helm_repo_url` is set, so
+the wrapper takes its **local chart** branch (`chart_ref` is a filesystem
+path, `chart/cividash`, not a repo/chart pair — `helm_chart_version` is
+therefore metadata only and NOT forwarded to the wrapper's `helm_chart_version`
+var). `helm_chart_reference` is anchored at `playbook_dir` (`{{ playbook_dir }}/{{
+addon_dir }}chart/cividash`): `kubernetes.core.helm`'s `chart_ref` only
+expands `~`, it does not resolve relative to the playbook, and the local
+connection plugin shells out from the `ansible-playbook` process's own cwd —
+so a bare `addon_dir`-relative path breaks when the playbook is run from a
+different working directory (e.g. the CORE repo root).
+
+**Log hygiene:** `tasks/cividash.yml` passes `helm_no_log: true`, but the
+current `core_platform/tasks/templates/k8s-helm.yml` does not read that var
+(no `no_log` on its `kubernetes.core.helm` task), so running the platform
+playbook with `-v`/`-vvv` still prints the rendered chart values — including
+`db.password`, `s3.secretAccessKey`, `APP_KEY` — to the log. Do not run the
+Helm step with `-v` against shared/persisted logs until CORE adds
+`no_log: "{{ helm_no_log | default(false) }}"` to that wrapper task. The
+vendored `dev/k8s-helm.yml` used by the local smoke already honours
+`helm_no_log`.
+
+Chart values are rendered by [`templates/values.yaml.j2`](templates/values.yaml.j2)
+from `inv_addons.cividash.*` + `software.addon_cividash.*` (image refs,
+honouring the private-registry override) + `inv_k8s.ingress_class` /
+`inv_k8s.cert_manager.issuer_name`. Override any chart value directly (values
+the inventory has no dedicated key for yet, e.g. per-workload `resources.*`)
+via `inv_addons.cividash.helm_values` — it is combined (recursive) on top
+of the rendered values (see `default_inventory.yml`).
+
+**APP_KEY idempotency** moved from an Ansible `k8s_info` dance into the chart
+itself: `chart/cividash/templates/_helpers.tpl`'s `cividash.appKey`
+uses `values.app.key` if set, else a Helm `lookup` of the existing
+`cividash-app-secret`'s `APP_KEY` (so re-installs preserve it), else a freshly
+generated `base64:`-prefixed key. `helm template` has no cluster to `lookup`
+against, so it always generates a fresh key there — expected, and why CI's
+`helm lint`/`helm template` runs don't assert a stable key.
+
+**Routing:** `ingress.enabled` (default `true`) renders the `cividash-public`
+`Ingress`. Set `gatewayApi.enabled: true` (`inv_addons.cividash.gateway_api.enabled`)
+to additionally (or instead) render a `gateway.networking.k8s.io/v1 HTTPRoute`
+named `cividash-public` for the same host -> `cividash-web:80`; supply
+`gatewayApi.parentRefs` naming your Gateway.
+
+Verify locally:
+
+```bash
+helm lint chart/cividash
+helm template cividash chart/cividash
+helm template cividash chart/cividash -f chart/cividash/ci/smoke-values.yaml
+```
 
 ## Execute
 
@@ -208,10 +291,11 @@ no managed backups and no Velero integration.
 
 The dashboard application is **database-agnostic** — it reads the standard
 Laravel connection env (`DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
-`DB_USERNAME`, `DB_PASSWORD`) and the production image already bundles the
-`pdo_pgsql` driver. The add-on therefore now targets **PostgreSQL**, the
+`DB_USERNAME`, `DB_PASSWORD`). The `cividash_app` image used here **must** bundle
+the `pdo_pgsql` driver (the `:dev` tag checked on 2026-09-09 did not — the
+migrate Job then fails with `could not find driver`; that is an image-build
 CORE-native database, and **no longer runs a database server itself**. It only
-renders the connection Secret (`cividash-db-secret`) from the role vars and connects
+renders the connection Secret (`cividash-db-secret`) from the chart values and connects
 to an externally provisioned Postgres. This mirrors the main-repo switch to
 PostgreSQL and closes the open policy question.
 
@@ -221,7 +305,7 @@ The Postgres instance/database is provided by the operator / CORE. The add-on is
 agnostic to the topology — any option works as long as the connection details are
 supplied. `db.host` and `db.password` are **required** (no default); `db.port`,
 `db.database` and `db.username` fall back to the defaults in
-[`vars/default.yml`](vars/default.yml):
+[`templates/values.yaml.j2`](templates/values.yaml.j2):
 
 1. **Dedicated Zalando `postgresql` cluster** in the CORE cluster (operator-managed
    backups, HA). Point `db.host` at its Service.

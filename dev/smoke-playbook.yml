@@ -2,14 +2,16 @@
 # =============================================================================
 # Local kind smoke playbook for the cividash-addon.
 #
-# Deploys the add-on's data-plane into a local kind cluster by reusing the REAL
-# role task files (tasks/secrets.yml, database.yml, migrate.yml, workloads.yml)
-# — so this exercises the actual manifests/templates, not a copy.
+# Deploys the add-on's data-plane into a local kind cluster via the SAME Helm
+# path production uses (dev/k8s-helm.yml, a vendored copy of the CORE
+# k8s-helm.yml wrapper's "local chart" branch — see dev/README.md), against
+# the REAL chart in chart/cividash/ — so this exercises the actual chart,
+# not a copy.
 #
 # The add-on bundles no database, so this playbook stands up a throwaway
 # in-cluster PostgreSQL (cividash-smoke-postgres) that stands in for the operator-
-# provided external Postgres. tasks/database.yml then just renders cividash-db-secret
-# from smoke-vars.yml (db.host -> cividash-smoke-postgres).
+# provided external Postgres; smoke-vars.yml points db.host at it, and the
+# chart renders cividash-db-secret from that.
 #
 # Skipped vs. a full CORE deploy (they need a real control plane):
 #   - tasks/keycloak_sso.yml  -> replaced by a placeholder cividash-oidc-secret
@@ -20,7 +22,6 @@
 # the gateway IP, and sets ansible_python_interpreter to ansible's bundled
 # python where the `kubernetes` lib is installed).
 # =============================================================================
-- name: CIVIDASH Civitas addon — local kind smoke (DB + workloads + migrate)
   hosts: localhost
   connection: local
   gather_facts: false
@@ -125,12 +126,10 @@
       retries: 30
       delay: 5
 
-    - name: "Smoke: app secret (cividash-app-secret)"
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/secrets.yml"
-
-    # keycloak_sso.yml is skipped locally; the workloads' envFrom references
-    # cividash-oidc-secret, so create a placeholder (SSO disabled, empty creds ->
-    # the NGSI-LD client falls back to anonymous, which the open local broker accepts).
+    # keycloak_sso.yml is skipped locally; the chart's workloads reference
+    # cividash-oidc-secret via envFrom, so create a placeholder (SSO disabled,
+    # empty creds -> the NGSI-LD client falls back to anonymous, which the
+    # open local broker accepts). Must exist BEFORE the Helm install below.
     - name: "Smoke: placeholder cividash-oidc-secret (keycloak_sso skipped)"
       kubernetes.core.k8s:
         state: present
@@ -154,11 +153,11 @@
             CIVITAS_OAUTH_CLIENT_ID: ""
             CIVITAS_OAUTH_CLIENT_SECRET: ""
 
-    - name: "Smoke: database connection secret (cividash-db-secret)"
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/database.yml"
-
-    - name: "Smoke: migration Job (php artisan migrate --force)"
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/migrate.yml"
-
-    - name: "Smoke: application workloads (fpm/web/queue/scheduler; ingress gated off)"
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/../tasks/workloads.yml"
+    - name: "Smoke: install cividash via Helm (local chart, same path as production)"
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/k8s-helm.yml"
+      vars:
+        helm_release_name: "cividash"
+        helm_chart_reference: "{{ addon_dir }}chart/cividash"
+        helm_values_file: "{{ addon_dir }}templates/values.yaml.j2"
+        helm_values_rcombine: "{{ inv_addons.cividash.helm_values | default({}) }}"
+        helm_create_namespace: false

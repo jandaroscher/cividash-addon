@@ -1,0 +1,81 @@
+# Default values for the cividash chart.
+
+images:
+  app:
+    registry: ghcr.io
+    repository: jandaroscher/cividash-app
+    tag: civitas
+    pullPolicy: Always
+  web:
+    registry: ghcr.io
+    repository: jandaroscher/cividash-web
+    tag: civitas
+    pullPolicy: Always
+  # Set to a non-empty string to reference an existing imagePullSecrets Secret.
+  pullSecret: ""
+
+replicas:
+  fpm: 2
+  web: 2
+
+app:
+  # Public host the app is served on (also used for the Ingress/HTTPRoute
+  # host). Required when ingress.enabled or gatewayApi.enabled is true.
+  publicHost: ""
+  # APP_KEY ("base64:" + 32 random bytes). Leave empty to resolve it at install
+  # time: reuse the existing cividash-app-secret's APP_KEY if the release already
+  # exists, otherwise generate a fresh one. NOTE: `helm template` has no cluster
+  # to look up, so it always renders a freshly generated key — this is expected
+  # and harmless for `helm lint`/`helm template`; real installs preserve the key
+  # via the Secret hook (see README, "Helm chart").
+  key: ""
+  civitasApiUrl: ""
+  s3:
+    accessKeyId: ""
+    secretAccessKey: ""
+    endpoint: ""
+    bucket: ""
+    publicUrl: ""
+    region: us-east-1
+
+db:
+  host: ""
+  port: 5432
+  database: cividash
+  username: cividash
+  password: ""
+
+ingress:
+  # Off by default: app.publicHost must be set before enabling. The Ansible
+  # values template (templates/values.yaml.j2) sets this explicitly per
+  # environment.
+  enabled: false
+  className: ""
+  tlsSecretName: ""
+  clusterIssuer: ""
+  sslRedirect: true
+
+# Gateway API (HTTPRoute) is an alternative to the Ingress above. Both can be
+# disabled independently; enabling gatewayApi does not disable ingress.
+gatewayApi:
+  enabled: false
+  parentRefs: []
+  # - name: my-gateway
+  #   namespace: gateway-system
+
+resources:
+  fpm:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  web:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 500m, memory: 128Mi }
+  queue:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  scheduler:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+  migrate:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }

@@ -1,0 +1,57 @@
+{{/*
+cividash-migrate — runs "php artisan migrate --force" before workloads.
+pre-install/pre-upgrade at weight 5, so it runs AFTER the weight-0 secrets
+in db-secret.yaml and app-secret.yaml. before-hook-creation + hook-succeeded: deleted and recreated fresh on
+every install/upgrade, then cleaned up once it succeeds.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cividash-migrate
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-migrate
+    spec:
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+          command: ["php", "artisan"]
+          args: ["migrate", "--force"]
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-oidc-secret
+            - secretRef:
+                name: cividash-db-secret
+          resources:
+            {{- toYaml .Values.resources.migrate | nindent 12 }}

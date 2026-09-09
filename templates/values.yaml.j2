@@ -1,0 +1,57 @@
+{#
+  Helm values for chart/cividash, rendered by tasks/templates/k8s-helm.yml
+  (lookup('template', helm_values_file) | from_yaml | combine(helm_values_rcombine)).
+  Variable sources:
+    - inv_addons.cividash.* (role/platform inventory)
+    - software.addon_cividash.* (image registry/repository/tag)
+    - inv_op_stack.private_registry.registry_full_url (private-registry override)
+    - inv_k8s.ingress_class / inv_k8s.cert_manager.issuer_name
+#}
+images:
+  app:
+    registry: "{{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_app.registry) }}"
+    repository: "{{ software.addon_cividash.cividash_app.repository }}"
+    tag: "{{ software.addon_cividash.cividash_app.tag }}"
+    pullPolicy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
+  web:
+    registry: "{{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_web.registry) }}"
+    repository: "{{ software.addon_cividash.cividash_web.repository }}"
+    tag: "{{ software.addon_cividash.cividash_web.tag }}"
+    pullPolicy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
+  pullSecret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
+
+replicas:
+  fpm: {{ inv_addons.cividash.replicas.fpm | default(2) }}
+  web: {{ inv_addons.cividash.replicas.web | default(2) }}
+
+app:
+  publicHost: "{{ inv_addons.cividash.public_host | default('') }}"
+  civitasApiUrl: "{{ inv_addons.cividash.civitas_api_url | default('') }}"
+  s3:
+    accessKeyId: {{ (inv_addons.cividash.s3.access_key_id) | to_json }}
+    secretAccessKey: {{ (inv_addons.cividash.s3.secret_access_key) | to_json }}
+    endpoint: {{ (inv_addons.cividash.s3.endpoint) | to_json }}
+    bucket: {{ (inv_addons.cividash.s3.bucket) | to_json }}
+    publicUrl: {{ (inv_addons.cividash.s3.public_url) | to_json }}
+    region: "{{ inv_addons.cividash.s3.region | default('us-east-1') }}"
+
+db:
+  host: "{{ inv_addons.cividash.db.host }}"
+  port: {{ inv_addons.cividash.db.port | default(5432) }}
+  database: "{{ inv_addons.cividash.db.database | default('cividash') }}"
+  username: "{{ inv_addons.cividash.db.username | default('cividash') }}"
+  password: {{ (inv_addons.cividash.db.password) | to_json }}
+
+ingress:
+  enabled: {{ inv_addons.cividash.enable_ingress | default(true) | bool | lower }}
+  className: "{{ inv_k8s.ingress_class | default('') }}"
+  clusterIssuer: "{{ inv_k8s.cert_manager.issuer_name | default('') }}"
+  sslRedirect: {{ (inv_addons.cividash.open_http_port | default('true')) | bool | lower }}
+
+gatewayApi:
+  enabled: {{ inv_addons.cividash.gateway_api.enabled | default(false) | bool | lower }}
+{% if inv_addons.cividash.gateway_api is defined and inv_addons.cividash.gateway_api.parentRefs is defined %}
+  parentRefs: {{ inv_addons.cividash.gateway_api.parentRefs | to_json }}
+{% else %}
+  parentRefs: []
+{% endif %}

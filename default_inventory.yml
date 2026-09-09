@@ -28,6 +28,10 @@ all:
             # Admin host for the Keycloak Socialite SSO callback. Defaults to
             # the public host (admin lives under /admin on the same host).
             admin_host: "dashboard.{{ DOMAIN }}"
+            # Set to false to disable the ingress-nginx SSL redirect (e.g. TLS
+            # terminated upstream of the ingress controller). Read by
+            # templates/values.yaml.j2 into chart values ingress.sslRedirect.
+            open_http_port: true
 
             # --- Keycloak ---------------------------------------------------
             # cividash client, used by the APP (not by APISIX) for the
@@ -68,6 +72,26 @@ all:
             replicas:
               web: 2
               fpm: 2
+
+            # --- Helm chart overrides ----------------------------------------
+            # Passed as helm_values_rcombine to tasks/templates/k8s-helm.yml —
+            # combined (recursive) on top of the values rendered from this
+            # inventory in templates/values.yaml.j2. Use it to reach chart
+            # values that have no dedicated inv_addons.cividash.* key yet
+            # (e.g. per-workload resources.*).
+            # helm_values:
+            #   resources:
+            #     fpm:
+            #       limits: { cpu: "2", memory: 1Gi }
+
+            # Gateway API (HTTPRoute) instead of / alongside the Ingress. Off
+            # by default; when enabled, parentRefs must name an existing
+            # Gateway.
+            # gateway_api:
+            #   enabled: true
+            #   parentRefs:
+            #     - name: "{{ ENVIRONMENT }}-gateway"
+            #       namespace: gateway-system
 
             # --- database (external PostgreSQL) ----------------------------
             # R1 resolved: the add-on no longer ships its own database server.

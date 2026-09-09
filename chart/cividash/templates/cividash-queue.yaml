@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cividash-queue
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-queue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-queue
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-queue
+    spec:
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: queue
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 82
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command: ["php"]
+          args: ["artisan", "queue:work", "--tries=3", "--max-time=3600"]
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-oidc-secret
+            - secretRef:
+                name: cividash-db-secret
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f \"artisan queue:work\" > /dev/null"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources.queue | nindent 12 }}

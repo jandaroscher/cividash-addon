@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cividash-scheduler
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-scheduler
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-scheduler
+    spec:
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scheduler
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 82
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command: ["sh", "-c", "while true; do php artisan schedule:run --no-interaction; sleep 60; done"]
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-oidc-secret
+            - secretRef:
+                name: cividash-db-secret
+          resources:
+            {{- toYaml .Values.resources.scheduler | nindent 12 }}

@@ -1,0 +1,38 @@
+# Minimal values exercising every conditional branch, for `helm lint`/`helm
+# template` in CI and local dev (see dev/README.md for the full kind smoke).
+images:
+  pullSecret: registry-creds
+
+replicas:
+  fpm: 1
+  web: 1
+
+app:
+  publicHost: dashboard.smoke.local
+  key: "base64:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+  civitasApiUrl: http://stellio.smoke.local:8090
+  s3:
+    accessKeyId: smoke
+    secretAccessKey: smoke-secret
+    endpoint: http://minio.smoke.local:9000
+    bucket: cividash-media
+    publicUrl: http://minio.smoke.local:9000/cividash-media
+    region: us-east-1
+
+db:
+  host: cividash-smoke-postgres
+  port: 5432
+  database: cividash
+  username: cividash
+  password: smoke-db-pass
+
+ingress:
+  enabled: true
+  className: nginx
+  clusterIssuer: selfsigned
+
+gatewayApi:
+  enabled: true
+  parentRefs:
+    - name: smoke-gateway
+      namespace: gateway-system

@@ -1,36 +1,26 @@
-{#
-  cividash-fpm: PHP-FPM application container (cividash_app image, full Laravel app).
-  - Listens on :9000 (image default CMD runs php-fpm; we only set env).
-  - App env via envFrom cividash-app-secret (APP_KEY, APP_*, S3/CIVITAS/KEYCLOAK...).
-  - Full DB connection (DB_CONNECTION/HOST/PORT/DATABASE/USERNAME/PASSWORD)
-    injected via envFrom cividash-db-secret (external Postgres); no DB env here.
-  - Per-pod writable dirs (storage/framework, bootstrap/cache) via emptyDir;
-    persistent media goes to S3 (PUBLIC_DISK_DRIVER=s3); logs -> stderr.
-  - Pod security per CONTRACT: non-root (uid 82 alpine www-data), no privilege
-    escalation, all caps dropped, RuntimeDefault seccomp.
-#}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cividash-fpm
   labels:
+    {{- include "cividash.labels" . | nindent 4 }}
     app.kubernetes.io/name: cividash-fpm
-    app.kubernetes.io/part-of: cividash
 spec:
-  replicas: {{ cividash_fpm_replicas | int }}
+  replicas: {{ .Values.replicas.fpm }}
   selector:
     matchLabels:
       app.kubernetes.io/name: cividash-fpm
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
+        {{- include "cividash.labels" . | nindent 8 }}
         app.kubernetes.io/name: cividash-fpm
-        app.kubernetes.io/part-of: cividash
     spec:
-{% if cividash_image_pull_secret %}
+      {{- if .Values.images.pullSecret }}
       imagePullSecrets:
-        - name: "{{ cividash_image_pull_secret }}"
-{% endif %}
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 82
@@ -40,20 +30,17 @@ spec:
           type: RuntimeDefault
       containers:
         - name: fpm
-          image: "{{ cividash_app_image }}"
-          imagePullPolicy: {{ cividash_image_pull_policy | default('Always') }}
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 82
             allowPrivilegeEscalation: false
             capabilities:
-              drop:
-                - ALL
+              drop: ["ALL"]
           ports:
             - name: fastcgi
               containerPort: 9000
-          # cividash-db-secret carries the full external-Postgres connection
-          # (DB_CONNECTION/HOST/PORT/DATABASE/USERNAME/PASSWORD) in one place.
           envFrom:
             - secretRef:
                 name: cividash-app-secret
@@ -75,3 +62,24 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources.fpm | nindent 12 }}
+---
+# Service name MUST stay "cividash-fpm" — the cividash-web nginx image has
+# fastcgi_pass cividash-fpm:9000 baked in.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cividash-fpm
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-fpm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cividash-fpm
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: fastcgi
+      port: 9000
+      targetPort: 9000
