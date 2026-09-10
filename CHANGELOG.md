@@ -13,6 +13,10 @@ All notable changes to this add-on are documented here. Format follows
   See README, "Breaking change" for the required
   one-time migration.
 - Image tags pinned to the immutable `civitas-<gitsha>` build tag instead of
+- `cividash-web` runs rootless: `nginxinc/nginx-unprivileged`, uid 101, container
+  port 8080 behind the unchanged Service port 80. The capability additions for
+  the nginx master are gone; every pod now runs `runAsNonRoot` with
+  `capabilities.drop: [ALL]`.
 
 ### Added
 

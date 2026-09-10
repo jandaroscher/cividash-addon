@@ -48,7 +48,7 @@ provisioned PostgreSQL** (see **R1**).
 | `cividash-migrate` | Job (Helm hook) | `php artisan migrate --force`; `pre-install,pre-upgrade`, weight `5` (after the two secrets above) |
 | `cividash-seed` | Job (Helm hook) | initial config data (tenant backfill/domain, optional pages/dashboard seed); `post-install,post-upgrade`, weight `10` — see "Initial config data" below |
 | `cividash-fpm` | Deployment + Service (9000) | php-fpm, the full Laravel/Filament app |
-| `cividash-web` | Deployment + Service (80) | nginx + baked public assets, `fastcgi_pass cividash-fpm:9000` |
+| `cividash-web` | Deployment + Service (80 -> 8080) | rootless nginx (uid 101) + baked public assets, `fastcgi_pass cividash-fpm:9000` |
 | `cividash-queue` | Deployment | `php artisan queue:work` |
 | `cividash-scheduler` | Deployment | loops `php artisan schedule:run` every 60s |
 | `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress`, `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
@@ -57,10 +57,9 @@ provisioned PostgreSQL** (see **R1**).
 All PHP pods (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`,
 `cividash-seed`) run with a hardened pod-security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82). `cividash-web` runs
-`seccompProfile: RuntimeDefault` with a minimal capability set, but its
-nginx master process still runs as root by default (see the conformance
-table). Media is stored on S3
+`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82, `cividash-web` as the
+nginx user uid 101 on `nginxinc/nginx-unprivileged`, listening on 8080 behind
+the Service port 80). Media is stored on S3
 (`PUBLIC_DISK_DRIVER=s3`); sessions, cache and queue use the database; logs go
 to stderr.
 
@@ -94,7 +93,6 @@ change" notes above) and in `CHANGELOG.md`.
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.6.1 |
 | CIVITAS/CORE platform | 1.6.2 – 1.6.3 |
-| CIVIDASH app image (`cividash_app`/`cividash_web`) | immutable tag `civitas-27b01473791d` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
@@ -400,7 +398,7 @@ add-on.
 | Own Kubernetes namespace | done | `inv_addons.cividash.ns_create`/`ns_name`, see [`default_inventory.yml`](default_inventory.yml) |
 | Helm via central platform task, metadata in `software_references.yml` | done | [`tasks/cividash.yml`](tasks/cividash.yml), [`vars/software_references.yml`](vars/software_references.yml) — see "Helm chart" above |
 | Execution after core platform tasks | done | Platform-controlled; not a parameter this add-on exposes (per guideline) |
-| No root | partial | `cividash-app`/`cividash-migrate`/`cividash-seed`/`cividash-fpm`/`cividash-queue`/`cividash-scheduler` run as uid 82, `runAsNonRoot: true`; the `cividash-web` nginx image's **master** process runs as root by default (worker processes drop privileges) — tracked in |
+| No root | done | All workloads using the `cividash-app` image (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`, `cividash-seed`) run as uid 82, `cividash-web` as uid 101 (`nginxinc/nginx-unprivileged`, port 8080); all pods `runAsNonRoot: true`, `capabilities.drop: [ALL]` without additions |
 | Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](tasks/apisix.yml)) plus `Ingress`/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see "Helm chart" (Routing) above |
 | Keycloak 6-step pattern | done | [`tasks/keycloak_sso.yml`](tasks/keycloak_sso.yml) — see "Admin auth" above |
 | Dedicated Postgres | done | External, operator-provisioned — see "R1 — Database" above |
