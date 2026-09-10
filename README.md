@@ -46,6 +46,7 @@ provisioned PostgreSQL** (see **R1**).
 | `cividash-app-secret` | Secret (Helm hook) | `APP_KEY` (idempotent) + app env; `pre-install,pre-upgrade`, weight `0` |
 | `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task (NOT part of the chart — see **Helm chart** below) |
 | `cividash-migrate` | Job (Helm hook) | `php artisan migrate --force`; `pre-install,pre-upgrade`, weight `5` (after the two secrets above) |
+| `cividash-seed` | Job (Helm hook) | initial config data (tenant backfill/domain, optional pages/dashboard seed); `post-install,post-upgrade`, weight `10` — see "Initial config data" below |
 | `cividash-fpm` | Deployment + Service (9000) | php-fpm, the full Laravel/Filament app |
 | `cividash-web` | Deployment + Service (80) | nginx + baked public assets, `fastcgi_pass cividash-fpm:9000` |
 | `cividash-queue` | Deployment | `php artisan queue:work` |
@@ -53,9 +54,13 @@ provisioned PostgreSQL** (see **R1**).
 | `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress`, `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
 | APISIX upstream + route | APISIX Admin API | open route `public_host` `/*` -> `cividash-web` (see **Admin auth**) |
 
-All pods run with a hardened pod-security context (`runAsNonRoot`,
+All PHP pods (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`,
+`cividash-seed`) run with a hardened pod-security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82). Media is stored on S3
+`capabilities.drop: [ALL]`; `cividash_app` runs as uid 82). `cividash-web` runs
+`seccompProfile: RuntimeDefault` with a minimal capability set, but its
+nginx master process still runs as root by default (see the conformance
+table). Media is stored on S3
 (`PUBLIC_DISK_DRIVER=s3`); sessions, cache and queue use the database; logs go
 to stderr.
 
@@ -63,7 +68,7 @@ to stderr.
 The CiviDash main repository builds and publishes two images to GHCR:
 
 - `cividash_app` -> `ghcr.io/jandaroscher/cividash-app` — php-fpm, the full application.
-  Used by `cividash-fpm`, `cividash-queue`, `cividash-scheduler` and the `cividash-migrate` Job.
+  Used by `cividash-fpm`, `cividash-queue`, `cividash-scheduler` and the `cividash-migrate`/`cividash-seed` Jobs.
 - `cividash_web` -> `ghcr.io/jandaroscher/cividash-web` — nginx with the baked public
   assets, proxying PHP to `cividash-fpm:9000`.
 
@@ -71,6 +76,41 @@ Tags/registries are configured in [`vars/software_references.yml`](vars/software
 under `software.addon_cividash.{cividash_app,cividash_web}.{registry,repository,tag}`.
 When `inv_op_stack.private_registry.registry_full_url` is set, it overrides the
 per-image registry (platform private-registry support).
+
+**maintainer test stack only** and **must not** be used in any inventory: it can move
+under a running deployment without any version bump in this repo. Pin
+inventories to an immutable `civitas-<gitsha>` tag (or, once available, a
+
+## Versioning and compatibility
+
+**Scheme:** the add-on's Helm chart version (`chart/cividash/Chart.yaml`)
+follows the CORE platform's minor version — add-on `1.6.x` targets CORE
+`1.6.x`. The patch digit is independent: the add-on may release `1.6.1`,
+`1.6.2`, ... without a matching CORE patch, and vice versa. Breaking changes
+to the inventory structure are documented in this README (see "Breaking
+change" notes above) and in `CHANGELOG.md`.
+
+| Component | Version |
+| --- | --- |
+| cividash add-on (this repo/chart) | 1.6.1 |
+| CIVITAS/CORE platform | 1.6.2 – 1.6.3 |
+| CIVIDASH app image (`cividash_app`/`cividash_web`) | immutable tag `civitas-27b01473791d` |
+| Helm | >= 3.14 |
+| Kubernetes | >= 1.28 |
+
+Kubernetes >= 1.28 is the tested/supported floor (CORE 1.6.x platforms), not
+a floor derived from the chart's own API usage: `apps/v1`, `batch/v1` and
+`networking.k8s.io/v1` `Ingress` only require Kubernetes >= 1.19. With
+`inv_addons.cividash.gateway_api.enabled: true` (chart value
+`gatewayApi.enabled`) the chart additionally needs Gateway API CRDs
+>= v1.0 installed on the cluster (`gateway.networking.k8s.io/v1 HTTPRoute`),
+independent of the Kubernetes version.
+
+**Cutting a release:** tag this repo `v1.6.x` (git tag on the add-on repo; not
+releases yet — until the main repo starts cutting a release tag, the
+immutable `civitas-<gitsha>` tags in `vars/software_references.yml` are the
+reference to pin against. Never reference the moving `civitas` tag from an
+add-on release or an inventory.
 
 ## Installation
 
@@ -199,6 +239,41 @@ helm template cividash chart/cividash
 helm template cividash chart/cividash -f chart/cividash/ci/smoke-values.yaml
 ```
 
+## Initial config data (`cividash-seed`)
+
+`chart/cividash/templates/cividash-seed.yaml` is a Helm hook Job
+(`post-install,post-upgrade`, weight `10`, after `cividash-migrate` and the
+workloads created by the same `helm upgrade --install`), per guideline:
+"initial loading of configuration data" via an add-on-local step after
+deployment. A Job, not an init script, per request. Gated by `seed.enabled`
+(default `true`, `inv_addons.cividash.seed.enabled`). Steps, all
+idempotent and safe to re-run on every install/upgrade:
+
+1. `php artisan tenancy:backfill --default-tenant={{ seed.defaultTenant }}` —
+   creates the tenant only if it doesn't exist yet (`Tenant::firstOrCreate`,
+   CiviDash main repo `app/Console/Commands/TenancyBackfillCommand.php`).
+2. When `seed.setTenantDomain` (default `true`): sets the default tenant's
+   `domain` to `app.publicHost` via `php artisan tinker`, only when it
+   differs — there is no dedicated artisan command for this.
+3. When `seed.pages` (default `false`): `php artisan pages:seed`. Idempotent:
+   slug and only updates changed fields, `NavigationSeeder` skips once header
+   navigation items exist.
+4. When `seed.dashboardJsonUrl` is non-empty (default empty): `php artisan
+   `CategorySeeder`/`TileSeeder` find-or-create per slug/title and only
+   update changed fields; `MetricSeeder` documents idempotent upserts.
+
+Values: `inv_addons.cividash.seed.{enabled,default_tenant,set_tenant_domain,pages,dashboard_json_url}`
+(see `default_inventory.yml`).
+
+**`seed.pages` / `seed.dashboardJsonUrl` require `seed.defaultTenant: default`.**
+Both seeders operate on a hardcoded `"default"` tenant slug elsewhere in the
+CiviDash main repo (`BelongsToTenant`'s creating-hook falls back to
+`Tenant::where('slug', 'default')`; `DashboardSeedCommand`'s tile-branding
+fallback chain does the same, and its own `--tenant` option is never read).
+With a different `seed.defaultTenant` and no `default` tenant, the Job would
+fail; with one present, content would land in the wrong tenant. The chart
+enforces this with a `fail` guard at render time.
+
 ## Execute
 
 The add-on installs after all other core-platform tasks. To run only this
@@ -315,3 +390,20 @@ supplied. `db.host` and `db.password` are **required** (no default); `db.port`,
 
 retention are handled by whichever Postgres the operator provisions, not by this
 add-on.
+
+## Conformance with the CORE add-on guideline (v1, 2026-09-02)
+
+| Guideline item | Status | Where |
+| --- | --- | --- |
+| Own repo + Copier template | done | This repo; `.copier-answers.yml` |
+| `tasks.yml` entry point + `addons`/`addon_<name>` tags | done | [`tasks.yml`](tasks.yml) |
+| Own Kubernetes namespace | done | `inv_addons.cividash.ns_create`/`ns_name`, see [`default_inventory.yml`](default_inventory.yml) |
+| Helm via central platform task, metadata in `software_references.yml` | done | [`tasks/cividash.yml`](tasks/cividash.yml), [`vars/software_references.yml`](vars/software_references.yml) — see "Helm chart" above |
+| Execution after core platform tasks | done | Platform-controlled; not a parameter this add-on exposes (per guideline) |
+| No root | partial | `cividash-app`/`cividash-migrate`/`cividash-seed`/`cividash-fpm`/`cividash-queue`/`cividash-scheduler` run as uid 82, `runAsNonRoot: true`; the `cividash-web` nginx image's **master** process runs as root by default (worker processes drop privileges) — tracked in |
+| Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](tasks/apisix.yml)) plus `Ingress`/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see "Helm chart" (Routing) above |
+| Keycloak 6-step pattern | done | [`tasks/keycloak_sso.yml`](tasks/keycloak_sso.yml) — see "Admin auth" above |
+| Dedicated Postgres | done | External, operator-provisioned — see "R1 — Database" above |
+| Initial config data | done | `cividash-seed` Helm hook Job — see "Initial config data" above |
+| Versioning (add-on minor follows CORE minor, patch free) | done | See "Versioning and compatibility" above |
+| Breaking changes documented in README | done | "Breaking change" note above |

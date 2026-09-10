@@ -55,3 +55,10 @@ gatewayApi:
 {% else %}
   parentRefs: []
 {% endif %}
+
+seed:
+  enabled: {{ inv_addons.cividash.seed.enabled | default(true) | bool | lower }}
+  defaultTenant: "{{ inv_addons.cividash.seed.default_tenant | default('default') }}"
+  setTenantDomain: {{ inv_addons.cividash.seed.set_tenant_domain | default(true) | bool | lower }}
+  pages: {{ inv_addons.cividash.seed.pages | default(false) | bool | lower }}
+  dashboardJsonUrl: "{{ inv_addons.cividash.seed.dashboard_json_url | default('') }}"

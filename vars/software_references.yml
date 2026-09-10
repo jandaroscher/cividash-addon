@@ -14,13 +14,14 @@
 # For more details, see https://docs.core.civitasconnect.digital/docs/Deployment/Private-Registry-Support
 #
 # Images are built and published by the CiviDash main repository to GHCR:
-#   cividash_app -> php-fpm, full Laravel app (used by fpm, queue, scheduler, migrate)
+#   cividash_app -> php-fpm, full Laravel app (used by fpm, queue, scheduler, migrate, seed)
 #   cividash_web -> nginx + baked public assets (fastcgi_pass cividash-fpm:9000)
 #
-# Tags are pinned to "civitas": the CIVIDASH main-repo CI publishes this moving tag
-# for the CORE add-on. For fully reproducible deploys, override the tag in your
-# platform inventory (software.addon_cividash.<image>.tag) with a concrete
-# immutable SHA tag (e.g. "sha-<gitsha>") instead of the moving "civitas" tag.
+# Tags are pinned to an immutable "civitas-<gitsha>" build tag (see README,
+# "Versioning and compatibility"). The moving "civitas" tag is also published
+# be used in inventories: it can change under a running deployment without
+# any version bump here. The pinned tag corresponds to CiviDash 1.0.0.
+# Override in your platform inventory (software.addon_cividash.<image>.tag).
 # -----------------------------------------------------------------------------
 
 ---
@@ -40,9 +41,9 @@ software:
     cividash_app:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-app"
-      tag: "civitas"
+      tag: "civitas-27b01473791d"
     # nginx image: serves the baked public assets and proxies PHP to cividash-fpm:9000.
     cividash_web:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-web"
-      tag: "civitas"
+      tag: "civitas-27b01473791d"

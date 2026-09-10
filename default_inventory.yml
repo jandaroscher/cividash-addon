@@ -73,6 +73,28 @@ all:
               web: 2
               fpm: 2
 
+            # --- initial config data (cividash-seed Helm hook Job) --------------
+            # Runs after migrate/workloads on every install/upgrade. Every
+            # step is idempotent (see chart/cividash/templates/cividash-seed.yaml).
+            seed:
+              enabled: true
+              # The CiviDash pages:seed/dashboard:seed seeders hardcode the
+              # tenant slug "default", so `pages: true` or a non-empty
+              # dashboard_json_url require this to stay "default" (the chart
+              # fails to render otherwise).
+              default_tenant: default
+              # Sets the default tenant's `domain` to public_host; only
+              # writes when it actually differs.
+              set_tenant_domain: true
+              # Seeds the reference pages/navigation (php artisan pages:seed).
+              # Off by default: only meaningful for the Regensburg reference
+              # content. Requires default_tenant: default.
+              pages: false
+              # Non-empty: seeds Tiles/Categories/Metrics from this
+              # dashboard.json URL (php artisan dashboard:seed --url=...).
+              # Requires default_tenant: default.
+              # dashboard_json_url: "https://example.org/dashboard.json"
+
             # --- Helm chart overrides ----------------------------------------
             # Passed as helm_values_rcombine to tasks/templates/k8s-helm.yml —
             # combined (recursive) on top of the values rendered from this

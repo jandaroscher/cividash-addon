@@ -6,7 +6,6 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Track ghcr.io/jandaroscher/cividash-app + cividash-web images declared in vars/software_references.yml. Images are published by the CIVIDASH main repo onto the moving 'civitas' tag (no semver), so pinDigests above is what makes Renovate open PRs here: it pins civitas@sha256:... and re-opens a PR whenever that digest changes.",
       "managerFilePatterns": [
         "/^vars/software_references\\.yml$/"
       ],

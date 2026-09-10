@@ -4,7 +4,7 @@
 #
 # These stub the CIVITAS/CORE platform inventory (inv_k8s / inv_op_stack /
 # software / inv_addons.cividash) just enough to deploy the add-on's
-# data-plane (the 4 app workloads + migrate Job) into a local kind cluster.
+# data-plane (the 4 app workloads + migrate/seed Jobs) into a local kind cluster.
 # Since the add-on bundles no database, the smoke playbook stands up a
 # throwaway PostgreSQL (cividash-smoke-postgres) that plays the role of the operator-
 # provided external Postgres; db.host below points at it. Keycloak/APISIX/Ingress

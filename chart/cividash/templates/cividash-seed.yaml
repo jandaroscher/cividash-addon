@@ -1,0 +1,103 @@
+{{/*
+cividash-seed — initial config data after deployment (guideline: "initial
+seeding runs once per release and is visible to the platform operator.
+post-install/post-upgrade at weight 10, so it runs AFTER the migrate Job (weight 5, pre-install/pre-upgrade) and after the workloads
+have been created by this same Helm apply. before-hook-creation +
+hook-succeeded: deleted and recreated fresh on every install/upgrade, then
+cleaned up once it succeeds.
+
+Every step below is safe to re-run:
+  - `tenancy:backfill --default-tenant` creates the tenant only if it does not
+    already exist, else it is a no-op (CiviDash main repo,
+    app/Console/Commands/TenancyBackfillCommand.php).
+  - the tenant-domain tinker step only writes when the domain actually
+    differs from app.publicHost.
+  - `pages:seed` is idempotent by construction: PageSeeder finds-or-creates
+    per DE slug and only updates changed fields (CiviDash main repo,
+    database/seeders/PageSeeder.php), and NavigationSeeder skips seeding once
+    header navigation items exist (database/seeders/NavigationSeeder.php).
+  - `dashboard:seed` is idempotent by construction: CategorySeeder/TileSeeder
+    find-or-create per slug/title and only update changed fields, and
+    MetricSeeder documents "idempotent upserts" (CiviDash main repo,
+    database/seeders/{CategorySeeder,TileSeeder,MetricSeeder}.php). No extra
+    "run only if empty" guard is needed for either optional step.
+  - `set -e` still exits non-zero on a genuine failure (e.g. bad --url), but
+    none of the steps above fail merely because they have nothing to do.
+*/}}
+{{- if .Values.seed.enabled }}
+{{- if and (ne .Values.seed.defaultTenant "default") (or .Values.seed.pages (ne .Values.seed.dashboardJsonUrl "")) }}
+{{- fail "seed.pages / seed.dashboardJsonUrl require seed.defaultTenant=default: the CiviDash pages:seed/dashboard:seed seeders hardcode the 'default' tenant slug (app/Models/Concerns/BelongsToTenant.php, DashboardSeedCommand::seedTileBrandingDefaults), so a non-default seed.defaultTenant would either fail the Job or seed the wrong tenant" }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cividash-seed
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-seed
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-seed
+    spec:
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              php artisan tenancy:backfill --default-tenant="{{ .Values.seed.defaultTenant }}"
+              {{- if .Values.seed.setTenantDomain }}
+              php artisan tinker --execute='
+              $t = \App\Models\Tenant::where("slug", "{{ .Values.seed.defaultTenant }}")->first();
+              if ($t && $t->domain !== "{{ .Values.app.publicHost }}") {
+                  $t->domain = "{{ .Values.app.publicHost }}";
+                  $t->save();
+                  echo "tenant domain set to " . $t->domain . PHP_EOL;
+              } else {
+                  echo "tenant domain unchanged" . PHP_EOL;
+              }
+              '
+              {{- end }}
+              {{- if .Values.seed.pages }}
+              php artisan pages:seed
+              {{- end }}
+              {{- if .Values.seed.dashboardJsonUrl }}
+              php artisan dashboard:seed --url="{{ .Values.seed.dashboardJsonUrl }}"
+              {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-oidc-secret
+            - secretRef:
+                name: cividash-db-secret
+          resources:
+            {{- toYaml .Values.resources.seed | nindent 12 }}
+{{- end }}

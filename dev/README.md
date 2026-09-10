@@ -40,7 +40,9 @@ dev/run-smoke.sh            # create cluster, load images, deploy, verify
 dev/run-smoke.sh teardown   # delete the kind cluster
 ```
 
-Expected: all pods `Running`, `cividash-migrate` `Complete`, `/up` → 200, and the
+Expected: all pods `Running`, `cividash-migrate` `Complete`, `cividash-seed` ran
+(tenant `default` backfilled with domain `dashboard.smoke.local`) and was
+deleted by its hook-succeeded policy, `/up` → 200, and the
 NGSI-LD sync reports `created N` then an idempotent re-run `skipped N`, with the
 rows persisted into the in-cluster PostgreSQL.
 

@@ -4,11 +4,21 @@ images:
   app:
     registry: ghcr.io
     repository: jandaroscher/cividash-app
+    # Chart-default only, for lint/template; real installs get this
+    # overridden by the Ansible values from vars/software_references.yml
+    # (see README, "Versioning and compatibility") to the immutable
+    # civitas-<gitsha> tag. Never leave "civitas" (a moving tag) in an
+    # inventory.
     tag: civitas
     pullPolicy: Always
   web:
     registry: ghcr.io
     repository: jandaroscher/cividash-web
+    # Chart-default only, for lint/template; real installs get this
+    # overridden by the Ansible values from vars/software_references.yml
+    # (see README, "Versioning and compatibility") to the immutable
+    # civitas-<gitsha> tag. Never leave "civitas" (a moving tag) in an
+    # inventory.
     tag: civitas
     pullPolicy: Always
   # Set to a non-empty string to reference an existing imagePullSecrets Secret.
@@ -63,6 +73,28 @@ gatewayApi:
   # - name: my-gateway
   #   namespace: gateway-system
 
+# Initial config data, seeded by the cividash-seed Helm hook Job (post-install,
+# post-upgrade) after migrate/workloads. Every step is idempotent, see
+# templates/cividash-seed.yaml.
+seed:
+  enabled: true
+  # The CiviDash pages:seed/dashboard:seed seeders hardcode the tenant slug
+  # "default" (BelongsToTenant creating-hook + DashboardSeedCommand fallback
+  # chain), so `pages: true` or a non-empty `dashboardJsonUrl` require this to
+  # stay "default" — the chart refuses to render otherwise.
+  defaultTenant: default
+  # Set the default tenant's `domain` to app.publicHost. Only writes when the
+  # domain actually differs.
+  setTenantDomain: true
+  # Off by default: seeds the reference pages/navigation (php artisan
+  # pages:seed). Idempotent, safe to leave on, but only meaningful for the
+  # Regensburg reference content. Requires defaultTenant: default.
+  pages: false
+  # Non-empty: seeds Tiles/Categories/Metrics from a dashboard.json URL
+  # (php artisan dashboard:seed --url=...). Idempotent. Empty = skipped.
+  # Requires defaultTenant: default.
+  dashboardJsonUrl: ""
+
 resources:
   fpm:
     requests: { cpu: 100m, memory: 256Mi }
@@ -77,5 +109,8 @@ resources:
     requests: { cpu: 50m, memory: 128Mi }
     limits: { cpu: 500m, memory: 256Mi }
   migrate:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  seed:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { cpu: "1", memory: 512Mi }

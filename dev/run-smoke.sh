@@ -5,7 +5,7 @@
 # Spins up a throwaway kind cluster, loads the locally-built cividash-app/cividash-web
 # images, stands up a throwaway PostgreSQL (cividash-smoke-postgres, standing in for
 # the operator-provided external DB), deploys the add-on data-plane (fpm/web/
-# queue/scheduler + migrate Job) via the Helm chart (dev/k8s-helm.yml, vendored
+# queue/scheduler + migrate/seed Jobs) via the Helm chart (dev/k8s-helm.yml, vendored
 # CORE local-chart branch), and pulls NGSI-LD data
 # from the local bare Stellio broker on the host (docker/civitas/v1.6.2, :8090).
 #
@@ -78,8 +78,31 @@ kubectl --context "$CTX" -n "$NS" rollout status deploy/cividash-web --timeout=1
 
 POD="$(kubectl --context "$CTX" -n "$NS" get pod -l app.kubernetes.io/name=cividash-fpm -o jsonpath='{.items[0].metadata.name}')"
 
-echo "== tenant backfill =="
-kubectl --context "$CTX" -n "$NS" exec "$POD" -- php artisan tenancy:backfill
+echo "== cividash-seed hook Job ran tenant backfill + domain =="
+# Helm already waited for the post-install/post-upgrade hook to complete, and
+# hook-succeeded delete policy removed the Job on success — `kubectl wait` on
+# a completed-and-deleted Job would error NotFound and abort the smoke here.
+# If the Job is still around, the hook did NOT succeed (only kept on failure).
+# Helm requests the deletion without waiting for the object to vanish, so give
+# the API server a moment before calling it a failure.
+for _ in $(seq 1 10); do
+  kubectl --context "$CTX" -n "$NS" get job/cividash-seed >/dev/null 2>&1 || break
+  sleep 3
+done
+if kubectl --context "$CTX" -n "$NS" get job/cividash-seed >/dev/null 2>&1; then
+  echo "FAIL: cividash-seed Job still present after 30s (hook did not succeed)" >&2
+  kubectl --context "$CTX" -n "$NS" logs job/cividash-seed || true
+  exit 1
+fi
+SEED_CHECK="$(kubectl --context "$CTX" -n "$NS" exec "$POD" -- php artisan tinker --execute='
+$t = \App\Models\Tenant::where("slug", "default")->first();
+echo $t ? "tenant=".$t->slug." domain=".$t->domain : "tenant=<missing>";
+')"
+echo "$SEED_CHECK"
+echo "$SEED_CHECK" | grep -q "tenant=default domain=dashboard.smoke.local" || {
+  echo "FAIL: cividash-seed did not backfill the default tenant / set its domain" >&2
+  exit 1
+}
 
 # The migrate Job seeds IntegrationSettings.api_url from CIVITAS_API_URL, which
 # the add-on sets to the CORE path /context/ngsi-ld. NgsiLdClient prefers the
