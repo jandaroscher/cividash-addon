@@ -393,6 +393,35 @@ supplied. `db.host` and `db.password` are **required** (no default); `db.port`,
 retention are handled by whichever Postgres the operator provisions, not by this
 add-on.
 
+## Uninstall
+
+`helm uninstall cividash --namespace <ns>` removes the Deployments, Services,
+
+  decommissioning:
+  `kubectl -n <ns> delete secret cividash-app-secret cividash-db-secret cividash-oidc-secret`.
+- **APISIX upstream + route**, registered by `tasks/apisix.yml`, are likewise
+  API.
+
+## Troubleshooting
+
+
+
+
+deployment.
+
+
+workloads are created if the shared `api-access` Keycloak client cannot mint a
+client-credentials token, or the token's `tenants` claim is empty — see
+prerequisites it checks. Only skip it with
+`inv_addons.cividash.m2m_preflight_enabled: false` if NGSI-LD sync not
+working is acceptable for your deployment.
+
+
+If Keycloak SSO redirects back to `/admin/login` instead of reaching the
+Filament panel, the app's server-side token exchange is likely failing against
+the public HTTPS Keycloak endpoint (a self-signed platform CA yields cURL error
+60). Set `inv_addons.cividash.keycloak_base_url_internal` to the in-cluster
+
 ## Conformance with the CORE add-on guideline (v1, 2026-09-02)
 
 | Guideline item | Status | Where |

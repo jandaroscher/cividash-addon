@@ -1,0 +1,74 @@
+# This repository adheres to publiccode.yml standard by including this
+# metadata file that makes public software easily discoverable.
+# More info at https://yml.publiccode.tools/
+
+publiccodeYmlVersion: "0"
+
+name: CiviDash CIVITAS/CORE Add-on
+applicationSuite: CiviDash
+url: "https://gitlab.opencode.de/regensburg_next/cividash-addon"
+softwareType: addon
+
+softwareVersion: 1.6.1
+releaseDate: "2026-09-23"
+
+platforms:
+  - web
+
+categories:
+  - data-visualization
+  - business-intelligence
+
+developmentStatus: stable
+
+legal:
+  license: EUPL-1.2+
+
+maintenance:
+  type: internal
+  contacts:
+    - name: "JANDA+ROSCHER GmbH & Co. KG"
+      email: "support@janda-roscher.de"
+
+dependsOn:
+  open:
+    - name: CIVITAS/CORE
+      versionMin: "1.6.2"
+      versionMax: "1.6.3"
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - en
+
+description:
+  de:
+    shortDescription: "CIVITAS/CORE-Add-on für das CiviDash-Nachhaltigkeitsdashboard"
+    longDescription: >
+      Packt CiviDash, das Open-Source-Nachhaltigkeitsdashboard für Kommunen, als
+      CIVITAS/CORE-Add-on: eine Ansible-Rolle plus lokales Helm-Chart für die
+      Installation über den zentralen Plattform-Helm-Task, dazu Keycloak-SSO- und
+      APISIX-Gateway-Anbindung. Reine Deploy-Logik, der Anwendungscode liegt im
+      CiviDash-Hauptrepository, das hier als vorgebaute Container-Images einfließt.
+    features:
+      - Installation über den zentralen CIVITAS/CORE-Plattform-Helm-Task
+      - Keycloak-SSO für den Admin-Bereich über einen eigenen Keycloak-Client
+      - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
+      - Anbindung an eine externe PostgreSQL-Datenbank und S3-Medienspeicher
+      - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
+    documentation: "https://gitlab.opencode.de/regensburg_next/cividash-addon/-/blob/main/README.md"
+  en:
+    shortDescription: "CIVITAS/CORE add-on for the CiviDash sustainability dashboard"
+    longDescription: >
+      Packages CiviDash, the open-source sustainability dashboard for municipalities,
+      as a CIVITAS/CORE add-on: an Ansible role plus a local Helm chart installed
+      through the central platform Helm task, with Keycloak SSO and APISIX gateway
+      wiring. Deploy-only logic; the application code lives in the CiviDash main
+      repository and ships here as prebuilt container images.
+    features:
+      - Installation über den zentralen CIVITAS/CORE-Plattform-Helm-Task
+      - Keycloak-SSO für den Admin-Bereich über einen eigenen Keycloak-Client
+      - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
+      - Anbindung an eine externe PostgreSQL-Datenbank und S3-Medienspeicher
+      - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
+    documentation: "https://gitlab.opencode.de/regensburg_next/cividash-addon/-/blob/main/README.md"
