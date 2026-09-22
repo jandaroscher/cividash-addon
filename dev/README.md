@@ -26,6 +26,7 @@ the APISIX/Keycloak wiring.
 
 - `kind`, `kubectl`, `ansible` (with the `kubernetes` python lib), `docker`.
 - **Helm v3.** `run-smoke.sh` prepends `$HOME/.local/bin` (override with
+  `HELM_BIN_DIR`, e.g. a CIVITAS/CORE local checkout's `bin/`) to `PATH` if a
   `helm` binary is found there — a system-installed Helm v4 breaks
   `kubernetes.core.helm`'s `helm list --all` call.
 - Locally built images `cividash-app:dev` and `cividash-web:dev` (from the CiviDash

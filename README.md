@@ -402,6 +402,10 @@ add-on.
 - **APISIX upstream + route**, registered by `tasks/apisix.yml`, are likewise
   API.
 
+
+
+   APISIX Admin API.
+
 ## Troubleshooting
 
 
