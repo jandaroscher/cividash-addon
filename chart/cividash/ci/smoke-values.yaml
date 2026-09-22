@@ -10,6 +10,7 @@ replicas:
 app:
   publicHost: dashboard.smoke.local
   key: "base64:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+  sessionSecureCookie: false # kind smoke is accessed over plain HTTP
   civitasApiUrl: http://stellio.smoke.local:8090
   s3:
     accessKeyId: smoke

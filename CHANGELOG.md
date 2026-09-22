@@ -25,3 +25,8 @@ All notable changes to this add-on are documented here. Format follows
   seed), gated by `seed.*` values.
 - "Versioning and compatibility" and "Conformance with the CORE add-on
   guideline" sections in the README.
+- Production-hardened logging/session defaults: `LOG_LEVEL=info`,
+  `LOG_CHANNEL=stderr`, `SESSION_SECURE_COOKIE=true`, configurable via
+  `inv_addons.cividash.log_level`/`log_channel`/`session_secure_cookie`.
+  `readOnlyRootFilesystem` was evaluated but left out — see README
+  "Conformance" table.

@@ -26,6 +26,9 @@ replicas:
 
 app:
   publicHost: "{{ inv_addons.cividash.public_host | default('') }}"
+  logLevel: "{{ inv_addons.cividash.log_level | default('info') }}"
+  logChannel: "{{ inv_addons.cividash.log_channel | default('stderr') }}"
+  sessionSecureCookie: {{ inv_addons.cividash.session_secure_cookie | default(true) | bool | lower }}
   civitasApiUrl: "{{ inv_addons.cividash.civitas_api_url | default('') }}"
   s3:
     accessKeyId: {{ (inv_addons.cividash.s3.access_key_id) | to_json }}

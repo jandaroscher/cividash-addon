@@ -39,6 +39,13 @@ app:
   # and harmless for `helm lint`/`helm template`; real installs preserve the key
   # via the Secret hook (see README, "Helm chart").
   key: ""
+  # Production defaults. LOG_CHANNEL=stderr suits containers (captured by the
+  # cluster's log driver instead of writing to a file no one rotates).
+  # SESSION_SECURE_COOKIE requires TLS in front of cividash-web (true by default
+  # since ingress.sslRedirect / the Gateway API path both terminate TLS).
+  logLevel: info
+  logChannel: stderr
+  sessionSecureCookie: true
   civitasApiUrl: ""
   s3:
     accessKeyId: ""

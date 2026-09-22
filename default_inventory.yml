@@ -33,6 +33,15 @@ all:
             # templates/values.yaml.j2 into chart values ingress.sslRedirect.
             open_http_port: true
 
+            # --- production hardening ---------------------------------------
+            # Laravel LOG_LEVEL/LOG_CHANNEL. stderr suits containers: captured
+            # by the cluster's log driver instead of a file no one rotates.
+            log_level: info
+            log_channel: stderr
+            # Requires TLS in front of cividash-web (true by default, matching
+            # open_http_port's SSL redirect above).
+            session_secure_cookie: true
+
             # --- Keycloak ---------------------------------------------------
             # cividash client, used by the APP (not by APISIX) for the
             # Socialite admin SSO standard flow ONLY. The NGSI-LD machine token

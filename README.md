@@ -141,6 +141,10 @@ inv_addons:
     admin_host: "dashboard.{{ DOMAIN }}"
     oidc_client_id: "cividash"
     replicas: { web: 2, fpm: 2 }
+    # Production hardening (defaults shown; override only to loosen for debugging).
+    log_level: info
+    log_channel: stderr
+    session_secure_cookie: true
     # External PostgreSQL connection. host + password are REQUIRED and must come
     # from your VAULTED inventory; database/username/port default in the chart values.
     db:
@@ -405,3 +409,5 @@ add-on.
 | Initial config data | done | `cividash-seed` Helm hook Job — see "Initial config data" above |
 | Versioning (add-on minor follows CORE minor, patch free) | done | See "Versioning and compatibility" above |
 | Breaking changes documented in README | done | "Breaking change" note above |
+| Hardened production defaults (log level/channel, debug off, secure session cookie) | done | `app.logLevel`/`app.logChannel`/`app.sessionSecureCookie` in [`values.yaml`](chart/cividash/values.yaml), templated from `inv_addons.cividash.log_level`/`log_channel`/`session_secure_cookie` — see [`default_inventory.yml`](default_inventory.yml) |
+| `readOnlyRootFilesystem` | partial | Not set. `cividash-fpm`/`cividash-queue`/`cividash-scheduler`/`cividash-migrate`/`cividash-seed` write to `storage/`, `bootstrap/cache`, and PHP's `/tmp`; `cividash-web` (nginx-unprivileged) writes its cache/pid dirs — none of these paths are backed by `emptyDir` volumes in the current templates, so a read-only root would break every workload. Add `emptyDir` mounts for those paths first, then flip this on. |
