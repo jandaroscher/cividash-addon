@@ -19,6 +19,7 @@
 #
 # Tags are pinned to an immutable "civitas-<gitsha>" build tag (see README,
 # "Versioning and compatibility"). The moving "civitas" tag is also published
+# by the CiviDash main-repo CI, but it is for the maintainers' test stack only and MUST NOT
 # be used in inventories: it can change under a running deployment without
 # any version bump here. The pinned tag corresponds to CiviDash 1.0.0.
 # Override in your platform inventory (software.addon_cividash.<image>.tag).

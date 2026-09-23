@@ -39,6 +39,7 @@ dependsOn:
 localisation:
   localisationReady: false
   availableLanguages:
+    - de
     - en
 
 description:
@@ -66,9 +67,9 @@ description:
       wiring. Deploy-only logic; the application code lives in the CiviDash main
       repository and ships here as prebuilt container images.
     features:
-      - Installation über den zentralen CIVITAS/CORE-Plattform-Helm-Task
-      - Keycloak-SSO für den Admin-Bereich über einen eigenen Keycloak-Client
-      - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
-      - Anbindung an eine externe PostgreSQL-Datenbank und S3-Medienspeicher
-      - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
+      - Installs through the central CIVITAS/CORE platform Helm task
+      - Keycloak SSO for the admin area via a dedicated Keycloak client
+      - NGSI-LD machine token via the shared api-access client
+      - Connects to an external PostgreSQL database and S3 media storage
+      - Idempotent database migration and initial data seed as Helm hook Jobs
     documentation: "https://gitlab.opencode.de/regensburg_next/cividash-addon/-/blob/main/README.md"

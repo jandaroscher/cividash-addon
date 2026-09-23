@@ -28,5 +28,6 @@ supplied. `db.host` and `db.password` are **required** (no default); `db.port`,
    database/role carved out of the shared cluster. Point `db.host` at the shared
    endpoint and `db.database`/`db.username` at the prepared database/role.
 
+Choose the topology with your platform operator. Backups, HA and
 retention are handled by whichever Postgres the operator provisions, not by this
 add-on.

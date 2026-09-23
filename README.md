@@ -69,6 +69,7 @@ are absent or commented out there fall back to `default()` values in
 | `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
 | `s3.{endpoint,bucket,public_url,region}` | see `default_inventory.yml` | S3 media storage |
 | `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
+| `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
 | `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing but also skips the APISIX route — see [Helm chart, Routing](docs/helm-chart.md#routing) |
 | `helm_values` | — | Recursive override merged on top of the rendered chart values |
@@ -152,6 +153,7 @@ created:
   `cividash-oidc-secret`, written by `tasks/keycloak_sso.yml` rather than by
   Helm, is never removed by Helm either. Delete all three explicitly:
   `kubectl -n <ns> delete secret cividash-app-secret cividash-db-secret cividash-oidc-secret`.
+- **Keycloak client** (`cividash`) and its `admin`/`editor` roles, registered
   by `tasks/keycloak_sso.yml`, are outside Helm's scope. Delete them via the
   Keycloak admin console/API.
 - **APISIX upstream + route**, registered by `tasks/apisix.yml`, are likewise

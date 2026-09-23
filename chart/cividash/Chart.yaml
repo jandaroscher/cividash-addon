@@ -5,3 +5,13 @@ type: application
 version: 1.6.1
 # Main-repo release the pinned civitas-<sha> images correspond to.
 appVersion: "1.0.0"
+home: https://gitlab.opencode.de/regensburg_next/cividash-addon
+sources:
+  - https://gitlab.opencode.de/regensburg_next/cividash-addon
+  - https://gitlab.opencode.de/regensburg_next/cividash
+maintainers:
+  - name: JANDA+ROSCHER GmbH & Co. KG
+    email: support@janda-roscher.de
+    url: https://www.janda-roscher.de
+annotations:
+  artifacthub.io/license: EUPL-1.2+

@@ -54,6 +54,8 @@ app:
     bucket: ""
     publicUrl: ""
     region: us-east-1
+    # Path-style URLs (endpoint/bucket/key), which self-hosted S3 such as MinIO expects.
+    usePathStyle: true
 
 db:
   host: ""

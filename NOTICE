@@ -1,0 +1,12 @@
+CiviDash CIVITAS/CORE Add-on
+Copyright (c) 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+
+Licensed under the EUPL-1.2 or later (SPDX-License-Identifier: EUPL-1.2+).
+See LICENSE for the full licence text.
+
+Source: https://gitlab.opencode.de/regensburg_next/cividash-addon
+
+This add-on contains deployment logic only (Ansible tasks and a Helm chart).
+The container images it deploys are built from the CiviDash main repository,
+https://gitlab.opencode.de/regensburg_next/cividash. Its NOTICE and SBOM
+apply to those images.

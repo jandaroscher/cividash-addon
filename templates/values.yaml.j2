@@ -37,6 +37,7 @@ app:
     bucket: {{ (inv_addons.cividash.s3.bucket) | to_json }}
     publicUrl: {{ (inv_addons.cividash.s3.public_url) | to_json }}
     region: "{{ inv_addons.cividash.s3.region | default('us-east-1') }}"
+    usePathStyle: {{ inv_addons.cividash.s3.use_path_style | default(true) | bool | lower }}
 
 db:
   host: "{{ inv_addons.cividash.db.host }}"

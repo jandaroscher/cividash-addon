@@ -28,6 +28,12 @@
 # ---------------------------------------------------------------------------
 
 # prepare variables and login to keycloak
+# The inventory key wins over the role default in vars/default.yml, which
+# include_vars loads with a higher precedence than inventory vars.
+- name: Resolve cividash Keycloak client id
+  set_fact:
+    cividash_oidc_client_id: "{{ inv_addons.cividash.oidc_client_id | default(IDM_CLIENT_CIVIDASH) }}"
+
 - name: Get Admin credentials
   kubernetes.core.k8s_info:
     kubeconfig: '{{ k8s_config }}'
