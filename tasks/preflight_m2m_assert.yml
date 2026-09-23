@@ -25,7 +25,7 @@
       be provisioned as an M2M client (serviceAccountsEnabled=true) and permit
       the '{{ _cividash_ngsi_ld_scope }}' scope. The add-on deliberately does NOT
       flip serviceAccountsEnabled itself (mirrors redpandaconnect_addon). See
-      README "Operator prerequisites (M2M / api-access)".
+      docs/authentication.md, "Operator prerequisites".
   when: _cividash_m2m_token.status != 200
 
 # Decode the JWT claims: split on '.', take the middle (payload) segment and
@@ -54,7 +54,7 @@
       tenant ds_open_data"). This is an OPERATOR provisioning prerequisite: the
       'api-access' service account must be a member of the tenant group (e.g.
       'ds_open_data') with the SPI-read attributes, so Keycloak populates the
-      'tenants' claim. See README "Operator prerequisites (M2M / api-access)".
+      'tenants' claim. See docs/authentication.md, "Operator prerequisites".
   when: (_cividash_m2m_claims.tenants | default([])) | length == 0
 
 - name: "M2M preflight: OK"

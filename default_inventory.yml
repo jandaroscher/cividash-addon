@@ -67,7 +67,7 @@ all:
             # keycloak_sso, verify the shared api-access client can mint a USABLE
             # NGSI-LD token — serviceAccountsEnabled=true (a token is issued) and
             # a non-empty "tenants" claim (Stellio grants tenant access). Both
-            # are OPERATOR provisioning prerequisites (see README "Operator
+            # are OPERATOR provisioning prerequisites (see docs/authentication.md, "Operator
             # prerequisites (M2M / api-access)"); the add-on only probes them and
             # fails loudly. Set false to consciously skip the check.
             m2m_preflight_enabled: true
@@ -125,7 +125,7 @@ all:
             #       namespace: gateway-system
 
             # --- database (external PostgreSQL) ----------------------------
-            # R1 resolved: the add-on no longer ships its own database server.
+            # The add-on ships no database server of its own.
             # It connects to an externally-provided PostgreSQL — host, database,
             # user and password are supplied by the CORE operator (e.g. an own
             # Zalando cluster or preparedDatabases). host + password are REQUIRED (no default) and

@@ -27,7 +27,7 @@ Resolve APP_KEY: values.app.key wins; else preserve the key already stored in
 the cluster's cividash-app-secret (so re-installs don't invalidate encrypted
 sessions/cookies); else generate a fresh one. `helm template` has no cluster to
 look up, so it always falls into the "generate fresh" branch (documented in
-values.yaml and the README "Helm chart" section).
+values.yaml and docs/helm-chart.md).
 */}}
 {{- define "cividash.appKey" -}}
 {{- if .Values.app.key -}}

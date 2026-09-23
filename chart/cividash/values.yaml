@@ -37,7 +37,7 @@ app:
   # exists, otherwise generate a fresh one. NOTE: `helm template` has no cluster
   # to look up, so it always renders a freshly generated key — this is expected
   # and harmless for `helm lint`/`helm template`; real installs preserve the key
-  # via the Secret hook (see README, "Helm chart").
+  # via the Secret hook (see docs/helm-chart.md).
   key: ""
   # Production defaults. LOG_CHANNEL=stderr suits containers (captured by the
   # cluster's log driver instead of writing to a file no one rotates).

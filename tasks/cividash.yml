@@ -49,8 +49,8 @@
       # the shared api-access client, not this one
       - inv_addons.cividash.oidc_client_id is defined
       - inv_addons.cividash.oidc_client_id | length > 0
-      # External PostgreSQL connection (R1 resolved: CORE-native Postgres,
-      # provisioned OUTSIDE the add-on). host + password are REQUIRED and come
+      # External PostgreSQL connection (CORE-native Postgres, provisioned
+      # OUTSIDE the add-on). host + password are REQUIRED and come
       # from the (vaulted) inventory; database/username/port fall back to
       # sensible defaults in the chart values.
       - inv_addons.cividash.db is defined
@@ -145,7 +145,7 @@
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------
-# APISIX: OPEN routes only (R2). One route per public_host, uri /* ->
+# APISIX: OPEN routes only. One route per public_host, uri /* ->
 # cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
 # app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
 # Runs AFTER Helm so the cividash-web Service already exists.

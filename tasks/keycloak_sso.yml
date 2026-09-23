@@ -220,7 +220,7 @@
       (user 'service-account-{{ IDM_CLIENT.API_ACCESS }}' was not found). It must be
       provisioned by the platform operator with serviceAccountsEnabled=true so this add-on
       can obtain the NGSI-LD machine token via client_credentials. This add-on does not
-      change the shared client. See README section 'Operator prerequisites (M2M / api-access)'.
+      change the shared client. See docs/authentication.md, "Operator prerequisites".
     success_msg: "api-access service account present; assigning NGSI-LD scope roles."
     quiet: true
 
