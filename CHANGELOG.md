@@ -3,6 +3,15 @@
 All notable changes to this add-on are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `default_inventory.yml` no longer contains live Jinja in a commented example
+  (`db.password`). CORE renders the file with `errors='warn'`, so the
+  undefined vault variable silently dropped the whole default inventory. CI
+  now renders the file with only `DOMAIN` and `ENVIRONMENT` set.
+
 ## [1.6.1] - 2026-09-23
 
 First public release.
@@ -23,5 +32,7 @@ First public release.
 - Secure logging/session defaults: `LOG_LEVEL=info`, `LOG_CHANNEL=stderr`,
   `SESSION_SECURE_COOKIE=true`, configurable via
   `inv_addons.cividash.log_level`/`log_channel`/`session_secure_cookie`.
+  `readOnlyRootFilesystem` is not set, see
+  [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
 [1.6.1]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/tags/v1.6.1

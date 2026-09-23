@@ -9,6 +9,7 @@ find driver` — see
 
 ## `cividash-fpm`/`cividash-web` stuck in `ImagePullBackOff`
 
+For a custom registry mirror, set `inv_addons.cividash.image_pull_secret` (chart value `images.pullSecret`) to the registry Secret name. The chart adds it to each workload Pod's `spec.imagePullSecrets`.
 
 ## Deploy stops at the M2M preflight
 

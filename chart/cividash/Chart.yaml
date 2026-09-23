@@ -5,6 +5,7 @@ type: application
 version: 1.6.1
 # Main-repo release the pinned civitas-<sha> images correspond to.
 appVersion: "1.0.0"
+kubeVersion: ">=1.28.0-0"
 home: https://gitlab.opencode.de/regensburg_next/cividash-addon
 sources:
   - https://gitlab.opencode.de/regensburg_next/cividash-addon

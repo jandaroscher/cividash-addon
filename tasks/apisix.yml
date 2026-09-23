@@ -3,6 +3,8 @@
 # CiviDash: APISIX gateway registration
 # -----------------------------------------------------------------------------
 # Registers the dashboard with the platform APISIX gateway via the APISIX
+# Admin API (uri-based, same pattern as the Digital Energy Twin add-on in the
+# CIVITAS/CORE deployment repo).
 #
 # ADMIN AUTH IS HANDLED BY THE APP, NOT APISIX:
 #   The APISIX route registered here is FULLY OPEN. There is intentionally NO

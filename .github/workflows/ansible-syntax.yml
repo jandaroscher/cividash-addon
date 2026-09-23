@@ -26,6 +26,18 @@ jobs:
           ansible-galaxy collection install kubernetes.core
       - name: Ansible syntax check
         run: ansible-playbook --syntax-check dev/syntax-check.yml
+      - name: Render default_inventory.yml
+        # CORE renders the file with lookup('template', errors='warn') | default({}),
+        # so any undefined variable silently drops the whole default inventory.
+        run: |
+          python - <<'PY'
+          import jinja2, yaml
+          env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+          src = open("default_inventory.yml").read()
+          out = env.from_string(src).render(DOMAIN="example.org", ENVIRONMENT="ci")
+          addon = yaml.safe_load(out)["all"]["children"]["controller"]["vars"]["inv_addons"]["cividash"]
+          assert addon["ns_name"] == "ci-cividash-stack", addon["ns_name"]
+          PY
       - name: Helm lint
         run: |
           helm lint chart/cividash

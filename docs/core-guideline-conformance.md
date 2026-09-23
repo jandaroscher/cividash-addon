@@ -14,5 +14,6 @@
 | Initial config data | done | `cividash-seed` Helm hook Job — see [Initial config data](seed.md) |
 | Versioning (add-on minor follows CORE minor, patch free) | done | See README, "Versioning and compatibility" |
 | Breaking changes documented | done | See [`CHANGELOG.md`](../CHANGELOG.md) |
+| Mandatory artefacts: `tasks.yml`, `default_inventory.yml`, `software_references.yml`, `README.md`, `LICENSE` | done | All present; `LICENSE` is EUPL-1.2 or later (SPDX `EUPL-1.2+`), matching the guideline's default licence EUPL-1.2 |
 | Hardened production defaults (log level/channel, debug off, secure session cookie) | done | `app.logLevel`/`app.logChannel`/`app.sessionSecureCookie` in [`values.yaml`](../chart/cividash/values.yaml), templated from `inv_addons.cividash.log_level`/`log_channel`/`session_secure_cookie` — see [`default_inventory.yml`](../default_inventory.yml) |
 | `readOnlyRootFilesystem` | partial | Not set. `cividash-fpm`/`cividash-queue`/`cividash-scheduler`/`cividash-migrate`/`cividash-seed` write to `storage/`, `bootstrap/cache`, and PHP's `/tmp`; `cividash-web` (nginx-unprivileged) writes its cache/pid dirs — none of these paths are backed by `emptyDir` volumes in the current templates, so a read-only root would break every workload. Add `emptyDir` mounts for those paths first, then flip this on. |
