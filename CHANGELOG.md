@@ -3,15 +3,6 @@
 All notable changes to this add-on are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Fixed
-
-- `default_inventory.yml` no longer contains live Jinja in a commented example
-  (`db.password`). CORE renders the file with `errors='warn'`, so the
-  undefined vault variable silently dropped the whole default inventory. CI
-  now renders the file with only `DOMAIN` and `ENVIRONMENT` set.
-
 ## [1.6.1] - 2026-09-23
 
 First public release.
