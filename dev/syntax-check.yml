@@ -1,0 +1,10 @@
+---
+# Stub playbook for `ansible-playbook --syntax-check`: imports the add-on the
+# way a CORE deploy does, so parse errors in tasks.yml and everything it
+# imports fail CI. Used by .github/workflows/ansible-syntax.yml.
+- name: CiviDash add-on syntax check
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Import the add-on
+      ansible.builtin.import_tasks: ../tasks.yml

@@ -8,6 +8,8 @@ PostgreSQL (CORE-native, Zalando Postgres operator).
 The dashboard application is **database-agnostic** — it reads the standard
 Laravel connection env (`DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
 `DB_USERNAME`, `DB_PASSWORD`). The image pinned in `vars/software_references.yml` includes `pdo_pgsql`; a
+custom or mirrored image without it fails `cividash-migrate` with `could not
+find driver` (see
 [Troubleshooting](troubleshooting.md)). The add-on targets **PostgreSQL**,
 the CORE-native database, and does not run a database server itself. It only
 renders the connection Secret (`cividash-db-secret`) from the chart values and

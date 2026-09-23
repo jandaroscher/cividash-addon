@@ -24,6 +24,9 @@
 #      client-credentials machine token from the shared api-access client).
 #
 # APISIX does NOT consume the cividash client: admin auth is enforced by the
+# app, not APISIX (see tasks/apisix.yml). The app uses cividash only for
+# Socialite admin SSO (Authorization-Code). The NGSI-LD machine token is
+# issued by the shared api-access client, mirroring
 # redpandaconnect_addon's FROST OAuth2 wiring.
 # ---------------------------------------------------------------------------
 

@@ -1,11 +1,14 @@
 {# ---------------------------------------------------------------------------
    Keycloak client JSON for the cividash add-on.
 
+   The CiviDash Laravel/Filament app uses this client only for Socialite admin
+   SSO: Authorization-Code flow (standardFlowEnabled), redirect to
    https://<admin_host|public_host>/admin/auth/keycloak/callback. APISIX does
    not consume this client; admin auth is enforced by the app.
 
    The NGSI-LD machine token is not issued by this client: it
    comes from the shared operator-provided "api-access" client, provisioned in
+   tasks/keycloak_sso.yml, so serviceAccountsEnabled is false here.
 
    Confidential client (publicClient=false, client-secret authenticator).
    Direct access grants (password grant) are intentionally disabled.

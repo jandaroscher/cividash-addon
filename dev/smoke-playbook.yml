@@ -22,6 +22,7 @@
 # the gateway IP, and sets ansible_python_interpreter to ansible's bundled
 # python where the `kubernetes` lib is installed).
 # =============================================================================
+- name: CiviDash add-on — local kind smoke (DB + Helm chart)
   hosts: localhost
   connection: local
   gather_facts: false

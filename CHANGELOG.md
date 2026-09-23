@@ -12,6 +12,8 @@ First public release.
 - Ansible role plus local Helm chart (`chart/cividash/`), installed as release
   `cividash` through the central CORE platform Helm task.
 - Images pinned to the immutable build tag `civitas-89f199edfe4e` of
+  `ghcr.io/jandaroscher/cividash-app` / `cividash-web`. The moving `civitas`
+  tag is for the maintainers' test stack only.
 - `cividash-web` runs rootless on `nginxinc/nginx-unprivileged` (uid 101,
   container port 8080 behind Service port 80); every pod runs `runAsNonRoot`
   with `capabilities.drop: [ALL]`.

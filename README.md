@@ -72,7 +72,15 @@ are absent or commented out there fall back to `default()` values in
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
 | `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing but also skips the APISIX route — see [Helm chart, Routing](docs/helm-chart.md#routing) |
+| `image_pull_policy` | `Always` | `imagePullPolicy` for the app and web images |
+| `image_pull_secret` | `""` | Name of an existing pull Secret, needed for private registries |
 | `helm_values` | — | Recursive override merged on top of the rendered chart values |
+
+The optional controller-side database check in `tasks/database.yml` is
+controlled by two top-level variables (not under `inv_addons.cividash`):
+`cividash_db_readiness_check` (default `false`) and
+`cividash_db_readiness_timeout` (default `60` seconds). See
+[Database](docs/database.md).
 
 ### Required vaulted keys
 
@@ -173,3 +181,16 @@ created:
 - [Troubleshooting](docs/troubleshooting.md)
 - [Conformance with the CORE add-on guideline](docs/core-guideline-conformance.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
+
+## Contributing, security and license
+
+The canonical repository is on openCode:
+<https://gitlab.opencode.de/regensburg_next/cividash-addon>. A mirror is
+published on GitHub: <https://github.com/jandaroscher/cividash-addon>.
+
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+
+Licensed under the EUPL-1.2 or later, see [LICENSE](LICENSE) and
+[NOTICE](NOTICE).

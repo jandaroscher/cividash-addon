@@ -2,6 +2,9 @@
 
 ## Migrate/seed Job fails with `could not find driver`
 
+The image pinned in `vars/software_references.yml` includes `pdo_pgsql`; a
+custom or mirrored image without it fails `cividash-migrate`/`cividash-seed` with `could not
+find driver` — see
 [Database](database.md).
 
 ## `cividash-fpm`/`cividash-web` stuck in `ImagePullBackOff`

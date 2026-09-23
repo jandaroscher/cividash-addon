@@ -1,5 +1,6 @@
 ---
 # =============================================================================
+# CiviDash add-on — Database (external PostgreSQL) readiness probe
 # =============================================================================
 # The add-on does not run a database server itself; it connects to an
 # EXTERNALLY provisioned Postgres. The Helm chart renders the connection Secret

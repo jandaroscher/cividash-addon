@@ -84,6 +84,7 @@ under `software.addon_cividash.{cividash_app,cividash_web}.{registry,repository,
 When `inv_op_stack.private_registry.registry_full_url` is set, it overrides the
 per-image registry (platform private-registry support).
 
+The CiviDash main-repo CI also publishes a **moving `civitas` tag**. It is for
 **the maintainers' test stack only** and **must not** be used in any inventory: it can move
 under a running deployment without any version bump in this repo. Pin
 inventories to an immutable `civitas-<gitsha>` tag — see [Versioning and compatibility](../README.md#versioning-and-compatibility).

@@ -15,9 +15,11 @@ idempotent and safe to re-run on every install/upgrade:
    `domain` to `app.publicHost` via `php artisan tinker`, only when it
    differs — there is no dedicated artisan command for this.
 3. When `seed.pages` (default `false`): `php artisan pages:seed`. Idempotent:
+   `PageSeeder` finds-or-creates per DE
    slug and only updates changed fields, `NavigationSeeder` skips once header
    navigation items exist.
 4. When `seed.dashboardJsonUrl` is non-empty (default empty): `php artisan
+   dashboard:seed --url=...`. Idempotent:
    `CategorySeeder`/`TileSeeder` find-or-create per slug/title and only
    update changed fields; `MetricSeeder` documents idempotent upserts.
 

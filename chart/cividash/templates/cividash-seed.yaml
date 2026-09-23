@@ -1,5 +1,6 @@
 {{/*
 cividash-seed — initial config data after deployment (guideline: "initial
+loading of configuration data"), as a Job rather than an init script, so
 seeding runs once per release and is visible to the platform operator.
 post-install/post-upgrade at weight 10, so it runs AFTER the migrate Job (weight 5, pre-install/pre-upgrade) and after the workloads
 have been created by this same Helm apply. before-hook-creation +

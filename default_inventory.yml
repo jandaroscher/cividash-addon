@@ -150,3 +150,4 @@ all:
               region: "us-east-1"
               # access_key_id: ""   # REQUIRED, supply via vaulted inventory
               # secret_access_key: ""  # REQUIRED, supply via vaulted inventory
+              # use_path_style: true   # AWS_USE_PATH_STYLE_ENDPOINT, needed for MinIO and most self-hosted S3
