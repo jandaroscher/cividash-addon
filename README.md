@@ -139,7 +139,7 @@ documented in `CHANGELOG.md`.
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.6.1 |
 | CIVITAS/CORE platform | 1.6.2 – 1.6.3 |
-| CiviDash app image (`cividash_app`/`cividash_web`) | immutable tag `civitas-89f199edfe4e` |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.0.0` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 

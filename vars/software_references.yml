@@ -42,9 +42,9 @@ software:
     cividash_app:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-app"
-      tag: "civitas-89f199edfe4e"
+      tag: "1.0.0"
     # nginx image: serves the baked public assets and proxies PHP to cividash-fpm:9000.
     cividash_web:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-web"
-      tag: "civitas-89f199edfe4e"
+      tag: "1.0.0"
