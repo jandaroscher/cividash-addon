@@ -1,4 +1,10 @@
-# CiviDash CIVITAS/CORE Add-on
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/cividash-logo-dark.svg">
+    <img src="docs/images/cividash-logo.svg" alt="CiviDash" width="320">
+  </picture>
+  <br>CIVITAS/CORE Add-on
+</h1>
 
 Packages **CiviDash**, the sustainability dashboard (Laravel 12 + Filament +
 a Vue 3 SPA), as a **CIVITAS/CORE** add-on. This is a **deploy-only**
