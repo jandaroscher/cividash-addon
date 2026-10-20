@@ -1,10 +1,10 @@
 # Security policy
 
-This repository packages [CiviDash](https://gitlab.opencode.de/regensburg_next/cividash) as a
+This repository packages [CiviDash](https://github.com/jandaroscher/cividash) as a
 CIVITAS/CORE add-on (Ansible role + Helm chart). It ships no application code of its
 own; the application security policy, supported versions and vulnerability handling
 are documented in the
-[main repository's `SECURITY.md`](https://gitlab.opencode.de/regensburg_next/cividash/-/blob/main/SECURITY.md).
+[main repository's `SECURITY.md`](https://github.com/jandaroscher/cividash/blob/main/SECURITY.md).
 
 ## Reporting a vulnerability in this add-on
 
