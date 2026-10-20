@@ -42,7 +42,7 @@ app:
   # Production defaults. LOG_CHANNEL=stderr suits containers (captured by the
   # cluster's log driver instead of writing to a file no one rotates).
   # SESSION_SECURE_COOKIE requires TLS in front of cividash-web (true by default
-  # since ingress.sslRedirect / the Gateway API path both terminate TLS).
+  # since the Ingress and the Gateway API path both terminate TLS).
   logLevel: info
   logChannel: stderr
   sessionSecureCookie: true
@@ -69,10 +69,18 @@ ingress:
   # values template (templates/values.yaml.j2) sets this explicitly per
   # environment.
   enabled: false
-  className: ""
+  # Traefik is the default ingress controller. Any other controller works by
+  # changing className and annotations.
+  className: traefik
   tlsSecretName: ""
   clusterIssuer: ""
-  sslRedirect: true
+  # Free-form annotations, rendered unchanged on the Ingress (after the
+  # cert-manager ones). For an HTTP -> HTTPS redirect on Traefik, either serve
+  # the router on the TLS entrypoint only:
+  #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  # or attach a redirect Middleware:
+  #   traefik.ingress.kubernetes.io/router.middlewares: <namespace>-<name>@kubernetescrd
+  annotations: {}
 
 # Gateway API (HTTPRoute) is an alternative to the Ingress above. Both can be
 # disabled independently; enabling gatewayApi does not disable ingress.

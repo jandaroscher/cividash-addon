@@ -52,9 +52,8 @@ db:
 
 ingress:
   enabled: {{ inv_addons.cividash.enable_ingress | default(true) | bool | lower }}
-  className: "{{ inv_k8s.ingress_class | default('') }}"
+  className: "{{ inv_k8s.ingress_class | default('traefik') }}"
   clusterIssuer: "{{ inv_k8s.cert_manager.issuer_name | default('') }}"
-  sslRedirect: {{ (inv_addons.cividash.open_http_port | default('true')) | bool | lower }}
 
 gatewayApi:
   enabled: {{ inv_addons.cividash.gateway_api.enabled | default(false) | bool | lower }}
