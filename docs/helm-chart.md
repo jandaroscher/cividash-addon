@@ -58,7 +58,8 @@ the `cividash-public` `Ingress`. The class comes from `ingress.className`
 free-form map rendered unchanged after the cert-manager annotations; the chart
 sets no controller-specific annotation itself.
 
-Traefik does not redirect HTTP to HTTPS on its own. Either restrict the router
+Traefik does not redirect HTTP to HTTPS unless the web entrypoint already
+redirects. Otherwise either restrict the router
 to the TLS entrypoint, or attach a redirect `Middleware`:
 
 ```yaml

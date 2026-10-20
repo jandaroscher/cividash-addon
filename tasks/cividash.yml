@@ -84,9 +84,9 @@
       Ingress, the HTTPRoute and the APISIX route).
     success_msg: "CiviDash: public_host present for public routing."
   when: >-
-    inv_addons.cividash.enable_ingress | default(true)
-    or (inv_addons.cividash.gateway_api | default({})).enabled | default(false)
-    or inv_addons.cividash.register_apisix_route | default(true)
+    inv_addons.cividash.enable_ingress | default(true) | bool
+    or (inv_addons.cividash.gateway_api | default({})).enabled | default(false) | bool
+    or inv_addons.cividash.register_apisix_route | default(true) | bool
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------
@@ -162,8 +162,8 @@
 
 # -----------------------------------------------------------------------------
 # APISIX: OPEN routes only, gated on register_apisix_route (independent of
-# enable_ingress, so Gateway API-only deploys still get the gateway route). One route per public_host, uri /* ->
-# cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
+# enable_ingress, so Gateway API-only deploys still get the gateway route).
+# One route per public_host, uri /* -> cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
 # app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
 # Runs AFTER Helm so the cividash-web Service already exists.
 # -----------------------------------------------------------------------------
@@ -173,5 +173,5 @@
     # include_tasks does not pass tags down; apply them (see the Helm task).
     apply:
       tags: ["addons", "addon_cividash"]
-  when: inv_addons.cividash.register_apisix_route | default(true)
+  when: inv_addons.cividash.register_apisix_route | default(true) | bool
   tags: ["addons", "addon_cividash"]

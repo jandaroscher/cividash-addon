@@ -24,6 +24,15 @@ All notable changes to this add-on are documented here. Format follows
   rendered unchanged on the `cividash-public` Ingress, e.g. via
   `inv_addons.cividash.helm_values`.
 
+### Breaking
+
+- Inventories with `enable_ingress: false` now run the `public_host` assert and
+  register the APISIX route by default. Set `register_apisix_route: false` for
+  the old behaviour.
+- Inventories without `inv_k8s.ingress_class` now get
+  `ingressClassName: traefik` instead of the cluster's default IngressClass. Set
+  `inv_k8s.ingress_class` explicitly to keep another controller.
+
 ### Changed
 
 - `public_host` is asserted whenever `enable_ingress`, `gateway_api.enabled` or
@@ -32,16 +41,15 @@ All notable changes to this add-on are documented here. Format follows
   `traefik` (`inv_k8s.ingress_class` still overrides it). The HTTP -> HTTPS
   redirect for Traefik is documented in
   [docs/helm-chart.md](docs/helm-chart.md#routing).
-- `enable_ingress: false` no longer skips the APISIX route. Set
-  `register_apisix_route: false` to keep the old behaviour.
 
 ### Removed
 
 - The hard-coded `nginx.ingress.kubernetes.io/ssl-redirect` annotation, the
   chart value `ingress.sslRedirect` and the inventory key `open_http_port`.
-  Inventories that still set `open_http_port` keep working, the key is
-  ignored. Controllers that need an annotation for the redirect get it through
-  `ingress.annotations`.
+  The play does not fail on a leftover `open_http_port`, but
+  `open_http_port: false` is no longer honoured. On ingress-nginx, set
+  `helm_values.ingress.annotations` with
+  `nginx.ingress.kubernetes.io/ssl-redirect: "false"` instead.
 
 ### Fixed
 
@@ -79,4 +87,5 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
+[Unreleased]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/compare/v1.6.1...main
 [1.6.1]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/tags/v1.6.1
