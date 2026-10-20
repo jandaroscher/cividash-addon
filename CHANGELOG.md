@@ -26,6 +26,9 @@ All notable changes to this add-on are documented here. Format follows
   an image reference without a registry; it falls back to the default.
 - Docs and comments no longer say images are pinned to a `civitas-<gitsha>`
   build tag; they are pinned to the CiviDash release tag.
+- A run with `--tags addons` or `--tags addon_cividash` skipped the database,
+  Keycloak SSO, M2M preflight and APISIX tasks, because `include_tasks` does
+  not pass its tags to the included tasks.
 
 ## [1.6.1] - 2026-09-23
 
