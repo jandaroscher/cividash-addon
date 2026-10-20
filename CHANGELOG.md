@@ -27,8 +27,10 @@ All notable changes to this add-on are documented here. Format follows
 ### Breaking
 
 - Inventories with `enable_ingress: false` now run the `public_host` assert and
-  register the APISIX route by default. Set `register_apisix_route: false` for
-  the old behaviour.
+  register an open APISIX route for `public_host` by default, which makes the
+  dashboard publicly reachable. Set `register_apisix_route: false` if the
+  deployment must stay internal or has no APISIX.
+- `open_http_port: false` now fails the play (see Removed).
 - Inventories without `inv_k8s.ingress_class` now get
   `ingressClassName: traefik` instead of the cluster's default IngressClass. Set
   `inv_k8s.ingress_class` explicitly to keep another controller.
@@ -46,9 +48,8 @@ All notable changes to this add-on are documented here. Format follows
 
 - The hard-coded `nginx.ingress.kubernetes.io/ssl-redirect` annotation, the
   chart value `ingress.sslRedirect` and the inventory key `open_http_port`.
-  The play does not fail on a leftover `open_http_port`, but
-  `open_http_port: false` is no longer honoured. On ingress-nginx, set
-  `helm_values.ingress.annotations` with
+  A leftover `open_http_port: true` is ignored, `open_http_port: false` fails
+  the play. On ingress-nginx, set `helm_values.ingress.annotations` with
   `nginx.ingress.kubernetes.io/ssl-redirect: "false"` instead.
 
 ### Fixed

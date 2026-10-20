@@ -75,8 +75,9 @@ ingress:
   tlsSecretName: ""
   clusterIssuer: ""
   # Free-form annotations, rendered unchanged on the Ingress (after the
-  # cert-manager ones; do not repeat the cert-manager keys here). For an HTTP -> HTTPS redirect on Traefik, either serve
-  # the router on the TLS entrypoint only:
+  # cert-manager ones; do not repeat the cert-manager keys here). For an
+  # HTTP -> HTTPS redirect on Traefik, either serve the router on the TLS
+  # entrypoint only:
   #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
   # or attach a redirect Middleware:
   #   traefik.ingress.kubernetes.io/router.middlewares: <namespace>-<name>@kubernetescrd

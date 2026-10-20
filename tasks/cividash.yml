@@ -89,6 +89,19 @@
     or inv_addons.cividash.register_apisix_route | default(true) | bool
   tags: ["addons", "addon_cividash"]
 
+# open_http_port was removed with the controller-neutral Ingress. Fail on the
+# one value that changed behaviour, so a TLS-terminated-upstream setup doesn't
+# silently get an SSL redirect loop after the upgrade.
+- name: "CiviDash: Reject removed open_http_port: false"
+  ansible.builtin.assert:
+    that:
+      - inv_addons.cividash.open_http_port | default(true) | bool
+    fail_msg: >-
+      inv_addons.cividash.open_http_port was removed. On ingress-nginx, set
+      helm_values.ingress.annotations."nginx.ingress.kubernetes.io/ssl-redirect"
+      to "false" instead, then drop open_http_port.
+  tags: ["addons", "addon_cividash"]
+
 # -----------------------------------------------------------------------------
 # Database connection: central CORE Postgres or external, plus the optional
 # controller-side readiness probe (see tasks/database.yml header).
