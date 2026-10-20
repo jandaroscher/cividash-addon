@@ -3,6 +3,7 @@
   (lookup('template', helm_values_file) | from_yaml | combine(helm_values_rcombine)).
   Variable sources:
     - inv_addons.cividash.* (role/platform inventory)
+    - cividash_db (database connection, resolved in tasks/database.yml)
     - software.addon_cividash.* (image registry/repository/tag defaults)
     - inv_addons.cividash.images.{app,web}.* (optional image overrides)
     - inv_op_stack.private_registry.registry_full_url (private-registry override)
@@ -43,11 +44,11 @@ app:
     usePathStyle: {{ inv_addons.cividash.s3.use_path_style | default(true) | bool | lower }}
 
 db:
-  host: "{{ inv_addons.cividash.db.host }}"
-  port: {{ inv_addons.cividash.db.port | default(5432) }}
-  database: "{{ inv_addons.cividash.db.database | default('cividash') }}"
-  username: "{{ inv_addons.cividash.db.username | default('cividash') }}"
-  password: {{ (inv_addons.cividash.db.password) | to_json }}
+  host: "{{ cividash_db.host }}"
+  port: {{ cividash_db.port }}
+  database: "{{ cividash_db.database }}"
+  username: "{{ cividash_db.username }}"
+  password: {{ cividash_db.password | to_json }}
 
 ingress:
   enabled: {{ inv_addons.cividash.enable_ingress | default(true) | bool | lower }}

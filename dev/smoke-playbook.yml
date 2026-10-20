@@ -154,6 +154,11 @@
             CIVITAS_OAUTH_CLIENT_ID: ""
             CIVITAS_OAUTH_CLIENT_SECRET: ""
 
+    # Same task file as production: sets the cividash_db fact the values
+    # template reads (external mode, pointing at the throwaway Postgres).
+    - name: "Smoke: resolve the database connection"
+      ansible.builtin.include_tasks: "{{ addon_dir }}tasks/database.yml"
+
     - name: "Smoke: install cividash via Helm (local chart, same path as production)"
       ansible.builtin.include_tasks: "{{ playbook_dir }}/k8s-helm.yml"
       vars:
