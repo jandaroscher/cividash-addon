@@ -70,19 +70,23 @@
     success_msg: "CiviDash: required inventory keys present."
   tags: ["addons", "addon_cividash"]
 
-# public_host only matters when ingress/APISIX are enabled (both gated on
-# enable_ingress). Assert it only then, so enable_ingress: false deploys
-# (no Ingress, no APISIX route) don't require a public_host.
-- name: "CiviDash: Validate public_host (ingress enabled)"
+# public_host backs the Ingress, the Gateway API HTTPRoute and the APISIX
+# route. Assert it whenever any of the three is enabled, so a deploy with all
+# of them off doesn't require a public_host.
+- name: "CiviDash: Validate public_host (public routing enabled)"
   ansible.builtin.assert:
     that:
       - inv_addons.cividash.public_host is defined
       - inv_addons.cividash.public_host | length > 0
     fail_msg: >-
-      inv_addons.cividash.public_host is required when enable_ingress
-      is true (it backs the public Ingress and the APISIX route).
-    success_msg: "CiviDash: public_host present for ingress."
-  when: inv_addons.cividash.enable_ingress | default(true)
+      inv_addons.cividash.public_host is required when enable_ingress,
+      gateway_api.enabled or register_apisix_route is true (it backs the
+      Ingress, the HTTPRoute and the APISIX route).
+    success_msg: "CiviDash: public_host present for public routing."
+  when: >-
+    inv_addons.cividash.enable_ingress | default(true)
+    or (inv_addons.cividash.gateway_api | default({})).enabled | default(false)
+    or inv_addons.cividash.register_apisix_route | default(true)
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------
@@ -157,7 +161,8 @@
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------
-# APISIX: OPEN routes only. One route per public_host, uri /* ->
+# APISIX: OPEN routes only, gated on register_apisix_route (independent of
+# enable_ingress, so Gateway API-only deploys still get the gateway route). One route per public_host, uri /* ->
 # cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
 # app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
 # Runs AFTER Helm so the cividash-web Service already exists.
@@ -168,5 +173,5 @@
     # include_tasks does not pass tags down; apply them (see the Helm task).
     apply:
       tags: ["addons", "addon_cividash"]
-  when: inv_addons.cividash.enable_ingress | default(true)
+  when: inv_addons.cividash.register_apisix_route | default(true)
   tags: ["addons", "addon_cividash"]
