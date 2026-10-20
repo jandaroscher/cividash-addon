@@ -163,8 +163,9 @@
 # -----------------------------------------------------------------------------
 # APISIX: OPEN routes only, gated on register_apisix_route (independent of
 # enable_ingress, so Gateway API-only deploys still get the gateway route).
-# One route per public_host, uri /* -> cividash-web upstream. NO openid-connect/auth plugin — the Laravel/Filament
-# app enforces its own auth (Fortify + optional Keycloak Socialite SSO).
+# One route per public_host, uri /* -> cividash-web upstream. NO
+# openid-connect/auth plugin — the Laravel/Filament app enforces its own
+# auth (Fortify + optional Keycloak Socialite SSO).
 # Runs AFTER Helm so the cividash-web Service already exists.
 # -----------------------------------------------------------------------------
 - name: "CiviDash: Configure APISIX open routes"
