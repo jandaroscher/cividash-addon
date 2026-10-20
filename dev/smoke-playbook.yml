@@ -17,6 +17,7 @@
 #   - tasks/keycloak_sso.yml  -> replaced by a placeholder cividash-oidc-secret
 #   - tasks/apisix.yml        -> not run (no APISIX admin API locally)
 #   - Ingress                 -> enable_ingress=false in smoke-vars.yml
+#     (the APISIX route is skipped too: this playbook never includes tasks/apisix.yml)
 #
 # Run via dev/run-smoke.sh (which creates the cluster, loads images, computes
 # the gateway IP, and sets ansible_python_interpreter to ansible's bundled

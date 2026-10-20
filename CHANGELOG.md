@@ -16,6 +16,32 @@ All notable changes to this add-on are documented here. Format follows
   provisions its own components. `db.host` and `db.password` are then not
   needed. The default stays the external Postgres. See
   [docs/database.md](docs/database.md).
+- `inv_addons.cividash.register_apisix_route` (default `true`) controls the
+  APISIX route registration on its own. It no longer depends on
+  `enable_ingress`, so `enable_ingress: false` with `gateway_api.enabled: true`
+  renders the `HTTPRoute` and registers the APISIX route.
+- Chart value `ingress.annotations` (default `{}`): free-form annotations
+  rendered unchanged on the `cividash-public` Ingress, e.g. via
+  `inv_addons.cividash.helm_values`.
+
+### Changed
+
+- `public_host` is asserted whenever `enable_ingress`, `gateway_api.enabled` or
+  `register_apisix_route` is true.
+- The default ingress controller is Traefik: `ingress.className` defaults to
+  `traefik` (`inv_k8s.ingress_class` still overrides it). The HTTP -> HTTPS
+  redirect for Traefik is documented in
+  [docs/helm-chart.md](docs/helm-chart.md#routing).
+- `enable_ingress: false` no longer skips the APISIX route. Set
+  `register_apisix_route: false` to keep the old behaviour.
+
+### Removed
+
+- The hard-coded `nginx.ingress.kubernetes.io/ssl-redirect` annotation, the
+  chart value `ingress.sslRedirect` and the inventory key `open_http_port`.
+  Inventories that still set `open_http_port` keep working, the key is
+  ignored. Controllers that need an annotation for the redirect get it through
+  `ingress.annotations`.
 
 ### Fixed
 

@@ -58,9 +58,9 @@ are absent or commented out there fall back to `default()` values in
 | `enable` | `true` | Enable the add-on |
 | `ns_create` / `ns_name` | `true` / `{{ ENVIRONMENT }}-cividash-stack` | Namespace |
 | `ns_kubeconfig` | `{{ kubeconfig_file \| default('kubeconfig') }}` | Kubeconfig used for the namespace/Helm tasks |
-| `enable_ingress` | `true` | Render the `cividash-public` Ingress, register the APISIX route and require `public_host`; `false` skips all three |
-| `public_host` / `admin_host` | `dashboard.{{ DOMAIN }}` / `dashboard.{{ DOMAIN }}` | Public hostname(s) |
-| `open_http_port` | `true` | Set `false` to disable the ingress-nginx SSL redirect (e.g. TLS terminated upstream) |
+| `enable_ingress` | `true` | Render the `cividash-public` Ingress. Class from `inv_k8s.ingress_class`, default `traefik` |
+| `register_apisix_route` | `true` | Register the open APISIX route, independent of `enable_ingress` and `gateway_api`; `false` disables it |
+| `public_host` / `admin_host` | `dashboard.{{ DOMAIN }}` / `dashboard.{{ DOMAIN }}` | Public hostname(s). `public_host` is required when `enable_ingress`, `gateway_api.enabled` or `register_apisix_route` is true |
 | `oidc_client_id` | `cividash` | Keycloak client id |
 | `ngsi_ld_roles` | `["dataConsumer", "dataProducer"]` | NGSI-LD client roles granted to the shared `api-access` service account — see [Authentication](docs/authentication.md) |
 | `ngsi_ld_scope` | `api:read api:write` | OAuth scope requested for the NGSI-LD machine token — see [Authentication](docs/authentication.md) |
@@ -78,11 +78,11 @@ are absent or commented out there fall back to `default()` values in
 | `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
-| `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing but also skips the APISIX route — see [Helm chart, Routing](docs/helm-chart.md#routing) |
+| `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing — see [Helm chart, Routing](docs/helm-chart.md#routing) |
 | `images.{app,web}.{registry,repository,tag}` | see `vars/software_references.yml` | Optional per-image override of the default image, e.g. for a mirror or a different tag — see [Helm chart, Images](docs/helm-chart.md#images) |
 | `image_pull_policy` | `Always` | `imagePullPolicy` for the app and web images |
 | `image_pull_secret` | `""` | Name of an existing pull Secret, needed for private registries |
-| `helm_values` | — | Recursive override merged on top of the rendered chart values |
+| `helm_values` | — | Recursive override merged on top of the rendered chart values, e.g. `ingress.annotations` for Ingress annotations such as the Traefik HTTP -> HTTPS redirect |
 
 The optional controller-side database check in `tasks/database.yml` is
 controlled by two top-level variables (not under `inv_addons.cividash`):
@@ -122,8 +122,8 @@ PostgreSQL (see [Database](docs/database.md)).
 | `cividash-web` | Deployment + Service (80 -> 8080) | rootless nginx (uid 101) + baked public assets |
 | `cividash-queue` | Deployment | `php artisan queue:work` |
 | `cividash-scheduler` | Deployment | loops `php artisan schedule:run` every 60s |
-| `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress`, `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
-| APISIX upstream + route | APISIX Admin API | when `enable_ingress`; open route `public_host` `/*` -> `cividash-web` (see [Authentication](docs/authentication.md)) |
+| `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress` (class `traefik` by default), `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
+| APISIX upstream + route | APISIX Admin API | when `register_apisix_route`; open route `public_host` `/*` -> `cividash-web` (see [Authentication](docs/authentication.md)) |
 
 All PHP pods run with a hardened pod-security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
