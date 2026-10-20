@@ -8,19 +8,19 @@ addon_dir: "addons/cividash_addon/"
 IDM_CLIENT_CIVIDASH: "cividash"
 
 # -----------------------------------------------------------------------------
-# Database connection (external PostgreSQL) — role defaults.
+# Database connection — role defaults.
 # -----------------------------------------------------------------------------
-# The add-on is DB-agnostic and bundles no database server. It connects
-# to an EXTERNALLY provisioned Postgres. Host / database / user / PASSWORD are
-# provided by the operator / CORE and MUST be set in your (vaulted) platform
-# inventory under inv_addons.cividash.db.*:
-#   db.host      (REQUIRED — the Postgres endpoint)
+# The add-on bundles no database server. tasks/database.yml resolves the
+# connection into the `cividash_db` fact, which templates/values.yaml.j2
+# renders into cividash-db-secret (chart/cividash/templates/db-secret.yaml):
+#   db.central   true: database + role in the central CORE Postgres, credentials
+#                from the operator-created Secret (host/port/username/password
+#                below are then ignored)
+#   db.host      (REQUIRED unless db.central — the Postgres endpoint)
 #   db.port      (defaults to 5432)
 #   db.database  (defaults to "cividash")
 #   db.username  (defaults to "cividash")
-#   db.password  (REQUIRED — supply via VAULT, never hardcode)
+#   db.password  (REQUIRED unless db.central — supply via VAULT, never hardcode)
 #
-# templates/values.yaml.j2 reads inv_addons.cividash.db.* directly into the
-# Helm chart's `db.*` values, which chart/cividash/templates/db-secret.yaml
-# renders into cividash-db-secret. host/password have no default on purpose:
-# tasks/cividash.yml asserts they are non-empty.
+# host/password have no default on purpose: tasks/cividash.yml asserts they
+# are non-empty unless db.central is set.

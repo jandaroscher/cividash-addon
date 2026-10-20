@@ -46,7 +46,7 @@ the add-on does the same for CiviDash (`tasks/database.yml`):
    `central-db.<ns>.svc.cluster.local`, username and password into
    `cividash-db-secret`.
 
-`db.host`, `db.username` and `db.password` are ignored in this mode, so no
+`db.host`, `db.port`, `db.username` and `db.password` are ignored in this mode (the port comes from `inv_central_db.port`), so no
 database credentials go into the inventory. The database is not removed on
 uninstall; delete the `preparedDatabases` entry and the database by hand if
 you need to.

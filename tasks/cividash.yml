@@ -65,7 +65,7 @@
       Missing required keys in inv_addons.cividash.
       Expected: oidc_client_id, either db.central: true or the vaulted
       external-Postgres db.{host,password} (db.{database,username,port}
-      default in the chart values), and the
+      default in tasks/database.yml), and the
       vaulted s3.{access_key_id,secret_access_key}.
     success_msg: "CiviDash: required inventory keys present."
   tags: ["addons", "addon_cividash"]
@@ -90,7 +90,11 @@
 # controller-side readiness probe (see tasks/database.yml header).
 # -----------------------------------------------------------------------------
 - name: "CiviDash: Resolve the database connection"
-  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/database.yml' }}"
+  ansible.builtin.include_tasks:
+    file: "{{ addon_dir | default('') + 'tasks/database.yml' }}"
+    # include_tasks does not pass tags down; apply them (see the Helm task).
+    apply:
+      tags: ["addons", "addon_cividash"]
   tags: ["addons", "addon_cividash"]
 
 # -----------------------------------------------------------------------------
@@ -100,7 +104,11 @@
 # it already in place.
 # -----------------------------------------------------------------------------
 - name: "CiviDash: Configure Keycloak SSO client"
-  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/keycloak_sso.yml' }}"
+  ansible.builtin.include_tasks:
+    file: "{{ addon_dir | default('') + 'tasks/keycloak_sso.yml' }}"
+    # include_tasks does not pass tags down; apply them (see the Helm task).
+    apply:
+      tags: ["addons", "addon_cividash"]
   tags: ["addons", "addon_cividash"]
 
 # M2M preflight: with the api-access facts from keycloak_sso in hand, verify
@@ -110,7 +118,11 @@
 # probes — it fails loudly rather than deploying a dashboard that cannot
 # reach Stellio. Skip with m2m_preflight_enabled: false.
 - name: "CiviDash: M2M preflight (api-access NGSI-LD token check)"
-  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/preflight_m2m.yml' }}"
+  ansible.builtin.include_tasks:
+    file: "{{ addon_dir | default('') + 'tasks/preflight_m2m.yml' }}"
+    # include_tasks does not pass tags down; apply them (see the Helm task).
+    apply:
+      tags: ["addons", "addon_cividash"]
   when: inv_addons.cividash.m2m_preflight_enabled | default(true)
   tags: ["addons", "addon_cividash"]
 
@@ -151,6 +163,10 @@
 # Runs AFTER Helm so the cividash-web Service already exists.
 # -----------------------------------------------------------------------------
 - name: "CiviDash: Configure APISIX open routes"
-  ansible.builtin.include_tasks: "{{ addon_dir | default('') + 'tasks/apisix.yml' }}"
+  ansible.builtin.include_tasks:
+    file: "{{ addon_dir | default('') + 'tasks/apisix.yml' }}"
+    # include_tasks does not pass tags down; apply them (see the Helm task).
+    apply:
+      tags: ["addons", "addon_cividash"]
   when: inv_addons.cividash.enable_ingress | default(true)
   tags: ["addons", "addon_cividash"]
