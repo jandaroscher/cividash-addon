@@ -32,8 +32,9 @@ vendored `dev/k8s-helm.yml` used by the local smoke already honours
 ## Values
 
 Chart values are rendered by [`templates/values.yaml.j2`](../templates/values.yaml.j2)
-from `inv_addons.cividash.*` + `software.addon_cividash.*` (image refs,
-honouring the private-registry override) + `inv_k8s.ingress_class` /
+from `inv_addons.cividash.*` + `software.addon_cividash.*` (image defaults,
+honouring the private-registry override) + `inv_addons.cividash.images.*`
+(optional image overrides, see [Images](#images)) + `inv_k8s.ingress_class` /
 `inv_k8s.cert_manager.issuer_name`. Override any chart value directly (values
 the inventory has no dedicated key for yet, e.g. per-workload `resources.*`)
 via `inv_addons.cividash.helm_values` — it is combined (recursive) on top
@@ -79,12 +80,34 @@ The CiviDash main repository builds and publishes two images to GHCR:
 - `cividash_web` -> `ghcr.io/jandaroscher/cividash-web` — nginx with the baked public
   assets, proxying PHP to `cividash-fpm:9000`.
 
-Tags/registries are configured in [`vars/software_references.yml`](../vars/software_references.yml)
+The defaults live in [`vars/software_references.yml`](../vars/software_references.yml)
 under `software.addon_cividash.{cividash_app,cividash_web}.{registry,repository,tag}`.
-When `inv_op_stack.private_registry.registry_full_url` is set, it overrides the
-per-image registry (platform private-registry support).
+They cannot be overridden from the inventory, because `vars/` is loaded with
+`include_vars`, which takes precedence over inventory variables.
+
+To use a mirror or a different tag, set the optional inventory keys
+`inv_addons.cividash.images.{app,web}.{registry,repository,tag}`. Each field is
+optional and falls back to the default when unset:
+
+```yaml
+inv_addons:
+  cividash:
+    images:
+      app:
+        registry: "registry.example.org"
+        repository: "mirror/cividash-app"
+        tag: "1.0.0"
+      web:
+        tag: "1.0.0"
+```
+
+The registry is resolved in this order, first match wins:
+
+1. `inv_addons.cividash.images.<app|web>.registry`, a deliberate operator choice.
+2. `inv_op_stack.private_registry.registry_full_url`, the platform private-registry setting.
+3. The default registry from `vars/software_references.yml`.
 
 The CiviDash main-repo CI also publishes a **moving `civitas` tag**. It is for
 **the maintainers' test stack only** and **must not** be used in any inventory: it can move
 under a running deployment without any version bump in this repo. Pin
-inventories to an immutable `civitas-<gitsha>` tag — see [Versioning and compatibility](../README.md#versioning-and-compatibility).
+inventories to an immutable CiviDash release tag such as `1.0.0` — see [Versioning and compatibility](../README.md#versioning-and-compatibility).

@@ -17,12 +17,15 @@
 #   cividash_app -> php-fpm, full Laravel app (used by fpm, queue, scheduler, migrate, seed)
 #   cividash_web -> nginx + baked public assets (fastcgi_pass cividash-fpm:9000)
 #
-# Tags are pinned to an immutable "civitas-<gitsha>" build tag (see README,
+# Tags are pinned to an immutable CiviDash release tag (see README,
 # "Versioning and compatibility"). The moving "civitas" tag is also published
 # by the CiviDash main-repo CI, but it is for the maintainers' test stack only and MUST NOT
 # be used in inventories: it can change under a running deployment without
 # any version bump here. The pinned tag corresponds to CiviDash 1.0.0.
-# Override in your platform inventory (software.addon_cividash.<image>.tag).
+# These are defaults only: vars/ is loaded with include_vars, which outranks
+# inventory variables, so an inventory value for software.addon_cividash.* has no
+# effect. Override images through inv_addons.cividash.images.{app,web}.
+# {registry,repository,tag} instead (see README and docs/helm-chart.md).
 # -----------------------------------------------------------------------------
 
 ---

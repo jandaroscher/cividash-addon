@@ -6,7 +6,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Track ghcr.io/jandaroscher/cividash-app + cividash-web images declared in vars/software_references.yml. Images are pinned to immutable 'civitas-<gitsha>' build tags, which are not versions; the package rule below disables updates while the current tag is such a build tag, so numbered release tags become eligible once the pin moves to one.",
+      "description": "Track ghcr.io/jandaroscher/cividash-app + cividash-web images declared in vars/software_references.yml. Images are pinned to immutable CiviDash release tags; the package rule below disables updates while the current tag is a 'civitas-' build tag, which is not a version.",
       "managerFilePatterns": [
         "/^vars/software_references\\.yml$/"
       ],

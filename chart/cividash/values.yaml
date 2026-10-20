@@ -7,7 +7,7 @@ images:
     # Chart-default only, for lint/template; real installs get this
     # overridden by the Ansible values from vars/software_references.yml
     # (see README, "Versioning and compatibility") to the immutable
-    # civitas-<gitsha> tag. Never leave "civitas" (a moving tag) in an
+    # CiviDash release tag. Never leave "civitas" (a moving tag) in an
     # inventory.
     tag: civitas
     pullPolicy: Always
@@ -17,7 +17,7 @@ images:
     # Chart-default only, for lint/template; real installs get this
     # overridden by the Ansible values from vars/software_references.yml
     # (see README, "Versioning and compatibility") to the immutable
-    # civitas-<gitsha> tag. Never leave "civitas" (a moving tag) in an
+    # CiviDash release tag. Never leave "civitas" (a moving tag) in an
     # inventory.
     tag: civitas
     pullPolicy: Always
