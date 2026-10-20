@@ -82,7 +82,7 @@ are absent or commented out there fall back to `default()` values in
 | `images.{app,web}.{registry,repository,tag}` | see `vars/software_references.yml` | Optional per-image override of the default image, e.g. for a mirror or a different tag — see [Helm chart, Images](docs/helm-chart.md#images) |
 | `image_pull_policy` | `Always` | `imagePullPolicy` for the app and web images |
 | `image_pull_secret` | `""` | Name of an existing pull Secret, needed for private registries |
-| `helm_values` | — | Recursive override merged on top of the rendered chart values, e.g. `ingress.annotations` for Ingress annotations such as the Traefik HTTP -> HTTPS redirect |
+| `helm_values` | — | Recursive override merged on top of the rendered chart values, e.g. `ingress.annotations` for Ingress annotations such as a Traefik entrypoint or redirect Middleware |
 
 The optional controller-side database check in `tasks/database.yml` is
 controlled by two top-level variables (not under `inv_addons.cividash`):

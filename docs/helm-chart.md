@@ -59,8 +59,9 @@ free-form map rendered unchanged after the cert-manager annotations; the chart
 sets no controller-specific annotation itself.
 
 Traefik does not redirect HTTP to HTTPS unless the web entrypoint already
-redirects. Otherwise either restrict the router
-to the TLS entrypoint, or attach a redirect `Middleware`:
+redirects. Otherwise either restrict the router to the TLS entrypoint, which
+disables plain HTTP for this host, or attach a redirect `Middleware` for a real
+redirect:
 
 ```yaml
 # inv_addons.cividash.helm_values
@@ -89,7 +90,9 @@ inv_addons:
 
 The APISIX route is registered by `tasks/apisix.yml` when
 `inv_addons.cividash.register_apisix_route` is `true` (default), regardless of
-`enable_ingress` and `gateway_api`. Set it to `false` to skip APISIX.
+`enable_ingress` and `gateway_api`. Set it to `false` to skip APISIX. This
+does not delete a route an earlier run registered; remove it via the APISIX
+Admin API (route id `cividash-web`) if needed.
 `public_host` is required (asserted in `tasks/cividash.yml`) when any of
 `enable_ingress`, `gateway_api.enabled` or `register_apisix_route` is true.
 

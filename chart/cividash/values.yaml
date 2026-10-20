@@ -41,8 +41,9 @@ app:
   key: ""
   # Production defaults. LOG_CHANNEL=stderr suits containers (captured by the
   # cluster's log driver instead of writing to a file no one rotates).
-  # SESSION_SECURE_COOKIE requires TLS in front of cividash-web (true by default
-  # since the Ingress and the Gateway API path both terminate TLS).
+  # SESSION_SECURE_COOKIE requires TLS in front of cividash-web. The Ingress
+  # terminates TLS itself; with Gateway API the referenced Gateway needs an
+  # HTTPS listener, otherwise set this to false.
   logLevel: info
   logChannel: stderr
   sessionSecureCookie: true
@@ -101,8 +102,8 @@ seed:
   # chain), so `pages: true` or a non-empty `dashboardJsonUrl` require this to
   # stay "default" — the chart refuses to render otherwise.
   defaultTenant: default
-  # Set the default tenant's `domain` to app.publicHost. Only writes when the
-  # domain actually differs.
+  # Set the default tenant's `domain` to app.publicHost. Only writes when
+  # app.publicHost is set and the domain actually differs.
   setTenantDomain: true
   # Off by default: seeds the reference pages/navigation (php artisan
   # pages:seed). Idempotent, safe to leave on, but only meaningful for the

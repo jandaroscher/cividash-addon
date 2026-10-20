@@ -124,8 +124,9 @@ all:
             # values that have no dedicated inv_addons.cividash.* key yet
             # (e.g. per-workload resources.*).
             # helm_values:
-            #   # HTTP -> HTTPS redirect on Traefik: serve the Ingress on the TLS
-            #   # entrypoint only (or reference a redirect Middleware via
+            #   # Traefik: serve the Ingress on the TLS entrypoint only, which
+            #   # disables plain HTTP for it (for a real HTTP -> HTTPS redirect,
+            #   # reference a redirect Middleware via
             #   # traefik.ingress.kubernetes.io/router.middlewares).
             #   ingress:
             #     annotations:
