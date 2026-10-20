@@ -1,23 +1,112 @@
 ---
 # =============================================================================
-# CiviDash add-on — Database (external PostgreSQL) readiness probe
+# CiviDash add-on — Database connection
 # =============================================================================
-# The add-on does not run a database server itself; it connects to an
-# EXTERNALLY provisioned Postgres. The Helm chart renders the connection Secret
-# (cividash-db-secret) (chart/cividash/templates/db-secret.yaml)
-# from the same inv_addons.cividash.db.* values, via values.yaml.j2. This
-# file holds only the OPTIONAL controller-side connectivity check.
+# The add-on does not run a database server itself. It resolves the PostgreSQL
+# connection into the `cividash_db` fact, which templates/values.yaml.j2 renders
+# into cividash-db-secret (chart/cividash/templates/db-secret.yaml).
 #
-# `wait_for` runs on the Ansible controller, so it only works when the DB
-# endpoint is reachable from there. It is DISABLED by default because an
-# in-cluster-only Postgres (e.g. a Zalando cluster Service) is not reachable
-# from the controller; enable it with `cividash_db_readiness_check: true` when the
-# endpoint is reachable.
+# Two modes, chosen by inv_addons.cividash.db.central:
+#
+# - central (true): register a database in the central CORE Postgres cluster
+#   (`central-db`, Zalando operator) the same way CORE registers its own
+#   components (Keycloak, Frost, Stellio, geodata): a `preparedDatabases` entry
+#   with `defaultUsers: true`. The operator creates the database, the
+#   `<db>_owner_user` login role and its credentials Secret in the central DB
+#   namespace; host, username and password are read from there.
+# - external (false, default): connect to an operator-provisioned Postgres;
+#   db.host and db.password come from the (vaulted) inventory.
+#
+# The optional `wait_for` probe at the end runs on the Ansible controller, so
+# it only works when the DB endpoint is reachable from there. It is DISABLED by
+# default because an in-cluster-only Postgres (e.g. a Zalando cluster Service)
+# is not reachable from the controller; enable it with
+# `cividash_db_readiness_check: true` when the endpoint is reachable.
 # =============================================================================
 
-- name: "CiviDash: Wait for external Postgres to accept TCP connections (optional)"
+- name: "CiviDash: Use a database in the central CORE Postgres"
+  when: inv_addons.cividash.db.central | default(false) | bool
+  vars:
+    cividash_db_name: "{{ inv_addons.cividash.db.database | default('cividash') }}"
+    cividash_central_ns: "{{ inv_central_db.ns_name }}"
+  block:
+    - name: "CiviDash: Validate the central database is enabled"
+      ansible.builtin.assert:
+        that:
+          - inv_central_db.enable | default(false) | bool
+          - cividash_db_name is match('^[a-z][a-z0-9_]*$')
+        fail_msg: >-
+          inv_addons.cividash.db.central needs the CORE central database
+          (inv_central_db.enable: true), and db.database must be a lowercase
+          Postgres identifier (letters, digits, underscores).
+
+    - name: "CiviDash: Look up the central database cluster"
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        api_version: acid.zalan.do/v1
+        kind: postgresql
+        namespace: "{{ cividash_central_ns }}"
+        name: central-db
+      register: cividash_central_db_cluster
+      failed_when: cividash_central_db_cluster.resources | length == 0
+
+    # Merge patch on the existing cluster: adds this one key under
+    # spec.preparedDatabases and leaves the CORE-managed databases untouched.
+    # The lookup above guarantees we never create a partial cluster.
+    - name: "CiviDash: Register the database in the central cluster"
+      kubernetes.core.k8s:
+        state: present
+        merge_type: merge
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        definition:
+          apiVersion: acid.zalan.do/v1
+          kind: postgresql
+          metadata:
+            name: central-db
+            namespace: "{{ cividash_central_ns }}"
+          spec:
+            preparedDatabases: "{{ {cividash_db_name: {'defaultUsers': true, 'schemas': {'public': {'defaultRoles': false}}}} }}"
+
+    # Zalando names the Secret after the role, with "_" replaced by "-".
+    - name: "CiviDash: Wait for the operator-created database credentials"
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        kind: Secret
+        namespace: "{{ cividash_central_ns }}"
+        name: "{{ cividash_db_name | replace('_', '-') }}-owner-user.central-db.credentials.postgresql.acid.zalan.do"
+      register: cividash_central_db_secret
+      until: cividash_central_db_secret.resources | length > 0
+      retries: "{{ cividash_db_central_retries | default(30) | int }}"
+      delay: 10
+      no_log: true
+
+    - name: "CiviDash: Use the central database connection"
+      ansible.builtin.set_fact:
+        cividash_db:
+          host: "central-db.{{ cividash_central_ns }}.svc.cluster.local"
+          port: "{{ inv_central_db.port | default(5432) | int }}"
+          database: "{{ cividash_db_name }}"
+          username: "{{ cividash_central_db_secret.resources[0].data.username | b64decode }}"
+          password: "{{ cividash_central_db_secret.resources[0].data.password | b64decode }}"
+      no_log: true
+
+- name: "CiviDash: Use the external database connection"
+  ansible.builtin.set_fact:
+    cividash_db:
+      host: "{{ inv_addons.cividash.db.host }}"
+      port: "{{ inv_addons.cividash.db.port | default(5432) | int }}"
+      database: "{{ inv_addons.cividash.db.database | default('cividash') }}"
+      username: "{{ inv_addons.cividash.db.username | default('cividash') }}"
+      password: "{{ inv_addons.cividash.db.password }}"
+  when: not (inv_addons.cividash.db.central | default(false) | bool)
+  no_log: true
+
+- name: "CiviDash: Wait for Postgres to accept TCP connections (optional)"
   ansible.builtin.wait_for:
-    host: "{{ inv_addons.cividash.db.host }}"
-    port: "{{ inv_addons.cividash.db.port | default(5432) | int }}"
+    host: "{{ cividash_db.host }}"
+    port: "{{ cividash_db.port }}"
     timeout: "{{ cividash_db_readiness_timeout | default(60) | int }}"
   when: cividash_db_readiness_check | default(false) | bool

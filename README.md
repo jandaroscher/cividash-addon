@@ -69,9 +69,10 @@ are absent or commented out there fall back to `default()` values in
 | `replicas.{web,fpm}` | `2` / `2` | Deployment replica counts |
 | `log_level` / `log_channel` | `info` / `stderr` | Production hardening, override only to loosen for debugging |
 | `session_secure_cookie` | `true` | Production hardening |
-| `db.host` | — | External PostgreSQL host, **required**, vaulted |
+| `db.central` | `false` | `true`: create the database and its role in the central CORE Postgres (`central-db`) and read the credentials from there; `db.host`/`db.password` are then not needed — see [Database](docs/database.md) |
+| `db.host` | — | External PostgreSQL host, **required** unless `db.central`, vaulted |
 | `db.port` / `db.database` / `db.username` | `5432` / `cividash` / `cividash` | Optional overrides |
-| `db.password` | — | **Required**, vaulted |
+| `db.password` | — | **Required** unless `db.central`, vaulted |
 | `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
 | `s3.{endpoint,bucket,public_url,region}` | see `default_inventory.yml` | S3 media storage |
 | `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
@@ -95,9 +96,9 @@ The following keys have no default and **must** be supplied via your (vaulted)
 platform inventory. The deploy asserts their presence and fails fast otherwise:
 
 - `inv_addons.cividash.db.host` — PostgreSQL hostname, rendered into
-  `cividash-db-secret` as `DB_HOST`.
+  `cividash-db-secret` as `DB_HOST`. Not needed with `db.central: true`.
 - `inv_addons.cividash.db.password` — PostgreSQL password, rendered into
-  `cividash-db-secret` as `DB_PASSWORD`.
+  `cividash-db-secret` as `DB_PASSWORD`. Not needed with `db.central: true`.
 - `inv_addons.cividash.s3.access_key_id` — S3 access key, rendered into
   `cividash-app-secret` as `AWS_ACCESS_KEY_ID`.
 - `inv_addons.cividash.s3.secret_access_key` — S3 secret key, rendered into
@@ -105,9 +106,10 @@ platform inventory. The deploy asserts their presence and fails fast otherwise:
 
 ## What it deploys
 
-Into the namespace `{{ ENVIRONMENT }}-cividash-stack`. The database is **not**
-deployed by the add-on — it connects to an externally provisioned PostgreSQL
-(see [Database](docs/database.md)).
+Into the namespace `{{ ENVIRONMENT }}-cividash-stack`. The add-on runs no
+database server. With `db.central: true` it registers a database in the
+central CORE Postgres; otherwise it connects to an externally provisioned
+PostgreSQL (see [Database](docs/database.md)).
 
 | Object | Kind | Notes |
 | --- | --- | --- |
@@ -183,7 +185,7 @@ created:
 
 - [Helm chart](docs/helm-chart.md) — installation wrapper, values, routing, verifying the chart locally, images
 - [Authentication](docs/authentication.md) — admin auth, the NGSI-LD machine token, operator prerequisites
-- [Database](docs/database.md) — external PostgreSQL, provisioning
+- [Database](docs/database.md) — central CORE Postgres or external PostgreSQL
 - [Initial config data](docs/seed.md) — the `cividash-seed` hook Job
 - [Troubleshooting](docs/troubleshooting.md)
 - [Conformance with the CORE add-on guideline](docs/core-guideline-conformance.md)

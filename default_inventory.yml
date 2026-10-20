@@ -136,14 +136,17 @@ all:
             #     - name: "{{ ENVIRONMENT }}-gateway"
             #       namespace: gateway-system
 
-            # --- database (external PostgreSQL) ----------------------------
-            # The add-on ships no database server of its own.
-            # It connects to an externally-provided PostgreSQL — host, database,
-            # user and password are supplied by the CORE operator (e.g. an own
-            # Zalando cluster or preparedDatabases). host + password are REQUIRED (no default) and
-            # MUST come from your vaulted inventory; database/username/port
-            # default in templates/values.yaml.j2. Uncomment to override the defaults:
+            # --- database (PostgreSQL) --------------------------------------
+            # The add-on ships no database server of its own. Two options:
+            # - central: true creates the database and its role in the central
+            #   CORE Postgres (inv_central_db) and reads the credentials from
+            #   the operator-created Secret; host/port/username/password are ignored.
+            # - otherwise it connects to an externally-provided PostgreSQL —
+            #   host + password are REQUIRED (no default) and MUST come from
+            #   your vaulted inventory; database/username/port default in
+            #   tasks/database.yml. Uncomment to override the defaults:
             # db:
+            #   central: false
             #   host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED, provided by the CORE operator
             #   port: 5432
             #   database: "cividash"

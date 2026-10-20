@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# Proof for the central-database mode (inv_addons.cividash.db.central: true).
+#
+# Runs the REAL tasks/database.yml against a cluster that has the Zalando
+# postgres-operator and a CORE-style `central-db` postgresql cluster, then
+# checks that the operator created the database role and that the resolved
+# connection points at the central cluster.
+#
+#   KUBECONFIG=... ansible-playbook dev/central-db.test.yml
+#
+# Prereqs: kubernetes.core collection + `kubernetes` python lib, a reachable
+# cluster with `central-db` in the namespace below, created with the prepared
+# databases `keycloak` and `frost` (as CORE does). Run it twice to check
+# idempotency (second run: the register task reports ok, not changed).
+# =============================================================================
+- name: CiviDash add-on — central database proof
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    addon_dir: "{{ playbook_dir }}/../"
+    k8s_config: "{{ lookup('env', 'KUBECONFIG') }}"
+    k8s_context: "{{ lookup('env', 'KUBE_CONTEXT') | default('default', true) }}"
+    inv_central_db:
+      enable: true
+      ns_name: "{{ lookup('env', 'CENTRAL_DB_NS') | default('ci-database-stack', true) }}"
+      port: "5432"
+    inv_addons:
+      cividash:
+        db:
+          central: true
+  tasks:
+    - name: "Proof: resolve the database connection (central mode)"
+      ansible.builtin.include_tasks: "{{ addon_dir }}tasks/database.yml"
+
+    - name: "Proof: connection points at the central cluster"
+      ansible.builtin.assert:
+        that:
+          - cividash_db.host == 'central-db.' + inv_central_db.ns_name + '.svc.cluster.local'
+          - cividash_db.database == 'cividash'
+          - cividash_db.username == 'cividash_owner_user'
+          - cividash_db.password | length > 0
+
+    - name: "Proof: CORE-managed databases are untouched"
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ k8s_config }}"
+        context: "{{ k8s_context }}"
+        api_version: acid.zalan.do/v1
+        kind: postgresql
+        namespace: "{{ inv_central_db.ns_name }}"
+        name: central-db
+      vars:
+        # Databases the test cluster was created with (see header).
+        proof_cluster_existing: ["keycloak", "frost"]
+      register: proof_cluster
+      failed_when: >-
+        not (['cividash'] + proof_cluster_existing) is subset(proof_cluster.resources[0].spec.preparedDatabases.keys() | list)

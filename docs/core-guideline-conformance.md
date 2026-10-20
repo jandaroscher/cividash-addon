@@ -10,7 +10,7 @@
 | No root | done | All workloads using the `cividash-app` image (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`, `cividash-seed`) run as uid 82, `cividash-web` as uid 101 (`nginxinc/nginx-unprivileged`, port 8080); all pods `runAsNonRoot: true`, `capabilities.drop: [ALL]` without additions |
 | Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](../tasks/apisix.yml)) plus `Ingress`/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see [Helm chart, Routing](helm-chart.md#routing) |
 | Keycloak 6-step pattern | done | [`tasks/keycloak_sso.yml`](../tasks/keycloak_sso.yml) — see [Authentication](authentication.md) |
-| Dedicated Postgres | done | External, operator-provisioned — see [Database](database.md) |
+| Dedicated Postgres | done | Database in the central CORE Postgres (`db.central`) or external, operator-provisioned — see [Database](database.md) |
 | Initial config data | done | `cividash-seed` Helm hook Job — see [Initial config data](seed.md) |
 | Versioning (add-on minor follows CORE minor, patch free) | done | See README, "Versioning and compatibility" |
 | Breaking changes documented | done | See [`CHANGELOG.md`](../CHANGELOG.md) |

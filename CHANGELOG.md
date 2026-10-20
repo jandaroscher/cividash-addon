@@ -10,6 +10,12 @@ All notable changes to this add-on are documented here. Format follows
 - Optional inventory keys `inv_addons.cividash.images.{app,web}.{registry,repository,tag}`
   to override the default images. An explicit registry takes precedence over
   `inv_op_stack.private_registry.registry_full_url`.
+- `inv_addons.cividash.db.central: true` creates the CiviDash database and its
+  role in the central CORE Postgres (`central-db`, `preparedDatabases`) and
+  reads the credentials from the operator-created Secret, the same way CORE
+  provisions its own components. `db.host` and `db.password` are then not
+  needed. The default stays the external Postgres. See
+  [docs/database.md](docs/database.md).
 
 ### Fixed
 
@@ -20,6 +26,9 @@ All notable changes to this add-on are documented here. Format follows
   an image reference without a registry; it falls back to the default.
 - Docs and comments no longer say images are pinned to a `civitas-<gitsha>`
   build tag; they are pinned to the CiviDash release tag.
+- A run with `--tags addons` or `--tags addon_cividash` skipped the database,
+  Keycloak SSO, M2M preflight and APISIX tasks, because `include_tasks` does
+  not pass its tags to the included tasks.
 
 ## [1.6.1] - 2026-09-23
 
