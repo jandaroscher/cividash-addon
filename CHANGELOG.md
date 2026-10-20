@@ -3,6 +3,20 @@
 All notable changes to this add-on are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Optional inventory keys `inv_addons.cividash.images.{app,web}.{registry,repository,tag}`
+  to override the default images. An explicit registry takes precedence over
+  `inv_op_stack.private_registry.registry_full_url`.
+
+### Fixed
+
+- Overriding images via `software.addon_cividash.*` in the inventory had no
+  effect, because `include_vars` outranks inventory variables. The comment in
+  `vars/software_references.yml` now points to the new `images` keys.
+
 ## [1.6.1] - 2026-09-23
 
 First public release.

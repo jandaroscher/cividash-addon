@@ -78,6 +78,7 @@ are absent or commented out there fall back to `default()` values in
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
 | `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing but also skips the APISIX route — see [Helm chart, Routing](docs/helm-chart.md#routing) |
+| `images.{app,web}.{registry,repository,tag}` | see `vars/software_references.yml` | Optional per-image override of the default image, e.g. for a mirror or a different tag — see [Helm chart, Images](docs/helm-chart.md#images) |
 | `image_pull_policy` | `Always` | `imagePullPolicy` for the app and web images |
 | `image_pull_secret` | `""` | Name of an existing pull Secret, needed for private registries |
 | `helm_values` | — | Recursive override merged on top of the rendered chart values |

@@ -3,20 +3,23 @@
   (lookup('template', helm_values_file) | from_yaml | combine(helm_values_rcombine)).
   Variable sources:
     - inv_addons.cividash.* (role/platform inventory)
-    - software.addon_cividash.* (image registry/repository/tag)
+    - software.addon_cividash.* (image registry/repository/tag defaults)
+    - inv_addons.cividash.images.{app,web}.* (optional image overrides)
     - inv_op_stack.private_registry.registry_full_url (private-registry override)
     - inv_k8s.ingress_class / inv_k8s.cert_manager.issuer_name
 #}
+{% set img_app = (inv_addons.cividash.images | default({})).app | default({}) %}
+{% set img_web = (inv_addons.cividash.images | default({})).web | default({}) %}
 images:
   app:
-    registry: "{{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_app.registry) }}"
-    repository: "{{ software.addon_cividash.cividash_app.repository }}"
-    tag: "{{ software.addon_cividash.cividash_app.tag }}"
+    registry: "{{ img_app.registry | default(inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_app.registry, true), true) }}"
+    repository: "{{ img_app.repository | default(software.addon_cividash.cividash_app.repository, true) }}"
+    tag: "{{ img_app.tag | default(software.addon_cividash.cividash_app.tag, true) }}"
     pullPolicy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
   web:
-    registry: "{{ inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_web.registry) }}"
-    repository: "{{ software.addon_cividash.cividash_web.repository }}"
-    tag: "{{ software.addon_cividash.cividash_web.tag }}"
+    registry: "{{ img_web.registry | default(inv_op_stack.private_registry.registry_full_url | default(software.addon_cividash.cividash_web.registry, true), true) }}"
+    repository: "{{ img_web.repository | default(software.addon_cividash.cividash_web.repository, true) }}"
+    tag: "{{ img_web.tag | default(software.addon_cividash.cividash_web.tag, true) }}"
     pullPolicy: "{{ inv_addons.cividash.image_pull_policy | default('Always') }}"
   pullSecret: "{{ inv_addons.cividash.image_pull_secret | default('') }}"
 
