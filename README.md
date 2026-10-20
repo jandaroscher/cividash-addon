@@ -152,7 +152,7 @@ a floor derived from the chart's own API usage — `apps/v1`, `batch/v1` and
 >= v1.0 installed on the cluster, independent of the Kubernetes version.
 
 **Cutting a release:** tag this repo `v1.6.x`. Images are pinned to an
-immutable `civitas-<gitsha>` build tag in
+immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
 to CiviDash 1.0.0. Never reference the moving `civitas` tag from an add-on
 release or an inventory.

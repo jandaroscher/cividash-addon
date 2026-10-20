@@ -17,7 +17,7 @@
 #   cividash_app -> php-fpm, full Laravel app (used by fpm, queue, scheduler, migrate, seed)
 #   cividash_web -> nginx + baked public assets (fastcgi_pass cividash-fpm:9000)
 #
-# Tags are pinned to an immutable "civitas-<gitsha>" build tag (see README,
+# Tags are pinned to an immutable CiviDash release tag (see README,
 # "Versioning and compatibility"). The moving "civitas" tag is also published
 # by the CiviDash main-repo CI, but it is for the maintainers' test stack only and MUST NOT
 # be used in inventories: it can change under a running deployment without

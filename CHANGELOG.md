@@ -16,6 +16,10 @@ All notable changes to this add-on are documented here. Format follows
 - Overriding images via `software.addon_cividash.*` in the inventory had no
   effect, because `include_vars` outranks inventory variables. The comment in
   `vars/software_references.yml` now points to the new `images` keys.
+- An empty `inv_op_stack.private_registry.registry_full_url` no longer renders
+  an image reference without a registry; it falls back to the default.
+- Docs and comments no longer say images are pinned to a `civitas-<gitsha>`
+  build tag; they are pinned to the CiviDash release tag.
 
 ## [1.6.1] - 2026-09-23
 
