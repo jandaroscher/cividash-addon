@@ -195,9 +195,9 @@ created:
 
 GitHub is the working and release repository:
 <https://github.com/jandaroscher/cividash-addon>. Issues, pull
-requests, Renovate dependency updates and release tags live there, and the
-application images come from the main repository's releases on
-`ghcr.io/jandaroscher`. Watch both GitHub repositories for new releases and
+requests, Renovate dependency updates and release tags live there. The
+application images are built from the main repository's releases and
+published to GitHub Container Registry at `ghcr.io/jandaroscher`. Watch both GitHub repositories for new releases and
 security fixes. The openCode repository
 (<https://gitlab.opencode.de/regensburg_next/cividash-addon>) is a mirror;
 changes made there are not merged back.
