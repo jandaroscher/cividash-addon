@@ -1,6 +1,6 @@
 {{/*
 Gateway API alternative to the Ingress in cividash-public.yaml, for platforms routing via a
-shared Gateway rather than an ingress-nginx controller. Same target: the
+shared Gateway rather than an ingress controller. Same target: the
 values.app.publicHost host -> cividash-web:80.
 */}}
 {{- if .Values.gatewayApi.enabled }}

@@ -54,7 +54,7 @@ inv_addons:
       region: "us-east-1"
 
 inv_k8s:
-  ingress_class: "nginx"
+  ingress_class: "traefik"
   cert_manager:
     issuer_name: "selfsigned"
   config:

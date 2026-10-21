@@ -29,7 +29,7 @@ db:
 
 ingress:
   enabled: true
-  className: nginx
+  className: traefik
   clusterIssuer: selfsigned
 
 gatewayApi:

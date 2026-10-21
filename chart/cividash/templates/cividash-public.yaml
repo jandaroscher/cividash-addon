@@ -11,12 +11,16 @@ metadata:
   labels:
     {{- include "cividash.labels" . | nindent 4 }}
     app.kubernetes.io/name: cividash-web
+  {{- if or .Values.ingress.clusterIssuer .Values.ingress.annotations }}
   annotations:
     {{- if .Values.ingress.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
     kubernetes.io/tls-acme: "true"
     {{- end }}
-    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.ingress.sslRedirect | quote }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

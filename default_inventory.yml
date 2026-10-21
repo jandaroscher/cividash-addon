@@ -19,27 +19,28 @@ all:
             ns_kubeconfig: "{{ kubeconfig_file | default('kubeconfig') }}"
 
             # --- ingress / routing -----------------------------------------
-            # When true, the public Ingress is created AND the open APISIX
-            # gateway route is registered (tasks/apisix.yml).
+            # When true, the public Ingress is created. The default ingress
+            # class is Traefik (inv_k8s.ingress_class, falls back to "traefik").
             enable_ingress: true
+            # Register the open APISIX gateway route (tasks/apisix.yml).
+            # Independent of enable_ingress and gateway_api: set to false to
+            # skip APISIX.
+            register_apisix_route: true
             # Public hostname the dashboard (and its /admin, /api, /filament,
             # /docs paths) is served on. One open APISIX route -> cividash-web.
             public_host: "dashboard.{{ DOMAIN }}"
             # Admin host for the Keycloak Socialite SSO callback. Defaults to
             # the public host (admin lives under /admin on the same host).
             admin_host: "dashboard.{{ DOMAIN }}"
-            # Set to false to disable the ingress-nginx SSL redirect (e.g. TLS
-            # terminated upstream of the ingress controller). Read by
-            # templates/values.yaml.j2 into chart values ingress.sslRedirect.
-            open_http_port: true
+            # Ingress annotations (e.g. the Traefik HTTP -> HTTPS redirect) go
+            # through helm_values, see the helm_values example below.
 
             # --- production hardening ---------------------------------------
             # Laravel LOG_LEVEL/LOG_CHANNEL. stderr suits containers: captured
             # by the cluster's log driver instead of a file no one rotates.
             log_level: info
             log_channel: stderr
-            # Requires TLS in front of cividash-web (true by default, matching
-            # open_http_port's SSL redirect above).
+            # Requires TLS in front of cividash-web (true by default).
             session_secure_cookie: true
 
             # --- Keycloak ---------------------------------------------------
@@ -93,7 +94,7 @@ all:
               # fails to render otherwise).
               default_tenant: default
               # Sets the default tenant's `domain` to public_host; only
-              # writes when it actually differs.
+              # writes when public_host is set and the domain differs.
               set_tenant_domain: true
               # Seeds the reference pages/navigation (php artisan pages:seed).
               # Off by default: only meaningful for the Regensburg reference
@@ -123,13 +124,22 @@ all:
             # values that have no dedicated inv_addons.cividash.* key yet
             # (e.g. per-workload resources.*).
             # helm_values:
+            #   # Traefik: serve the Ingress on the TLS entrypoint only, which
+            #   # disables plain HTTP for it (for a real HTTP -> HTTPS redirect,
+            #   # reference a redirect Middleware via
+            #   # traefik.ingress.kubernetes.io/router.middlewares).
+            #   ingress:
+            #     annotations:
+            #       traefik.ingress.kubernetes.io/router.entrypoints: websecure
             #   resources:
             #     fpm:
             #       limits: { cpu: "2", memory: 1Gi }
 
             # Gateway API (HTTPRoute) instead of / alongside the Ingress. Off
             # by default; when enabled, parentRefs must name an existing
-            # Gateway.
+            # Gateway. Recommended forward-looking alternative to the Ingress:
+            # combine with enable_ingress: false for HTTPRoute-only routing
+            # (the APISIX route stays on, see register_apisix_route).
             # gateway_api:
             #   enabled: true
             #   parentRefs:

@@ -53,15 +53,48 @@ against, so it always generates a fresh key there — expected, and why CI's
 ## Routing
 
 `ingress.enabled` (`inv_addons.cividash.enable_ingress`, default `true`) renders
-the `cividash-public` `Ingress`. Set `gatewayApi.enabled: true`
-(`inv_addons.cividash.gateway_api.enabled`) to additionally render a
-`gateway.networking.k8s.io/v1 HTTPRoute` named `cividash-public` for the same
+the `cividash-public` `Ingress`. The class comes from `ingress.className`
+(`inv_k8s.ingress_class`, default `traefik`). `ingress.annotations` is a
+free-form map rendered unchanged after the cert-manager annotations; the chart
+sets no controller-specific annotation itself.
+
+Traefik does not redirect HTTP to HTTPS unless the web entrypoint already
+redirects. Otherwise either restrict the router to the TLS entrypoint, which
+disables plain HTTP for this host, or attach a redirect `Middleware` for a real
+redirect:
+
+```yaml
+# inv_addons.cividash.helm_values
+ingress:
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # or: traefik.ingress.kubernetes.io/router.middlewares: <namespace>-<name>@kubernetescrd
+```
+
+Gateway API is the recommended forward-looking alternative. Set
+`gatewayApi.enabled: true` (`inv_addons.cividash.gateway_api.enabled`) to render
+a `gateway.networking.k8s.io/v1 HTTPRoute` named `cividash-public` for the same
 host -> `cividash-web:80`; supply `gatewayApi.parentRefs` naming your Gateway.
-The two flags are independent — with the add-on's defaults, enabling Gateway
-API renders both the `Ingress` and the `HTTPRoute`. For `HTTPRoute`-only
-routing, also set `inv_addons.cividash.enable_ingress: false`. That flag also
-gates the APISIX route registration and the `public_host` assert in
-`tasks/cividash.yml`, so `false` skips the APISIX route as well.
+Ingress and Gateway API are independent flags; for `HTTPRoute`-only routing:
+
+```yaml
+inv_addons:
+  cividash:
+    enable_ingress: false
+    gateway_api:
+      enabled: true
+      parentRefs:
+        - name: my-gateway
+          namespace: gateway-system
+```
+
+The APISIX route is registered by `tasks/apisix.yml` when
+`inv_addons.cividash.register_apisix_route` is `true` (default), regardless of
+`enable_ingress` and `gateway_api`. Set it to `false` to skip APISIX. This
+does not delete a route an earlier run registered; remove it via the APISIX
+Admin API (route id `cividash-web`) if needed.
+`public_host` is required (asserted in `tasks/cividash.yml`) when any of
+`enable_ingress`, `gateway_api.enabled` or `register_apisix_route` is true.
 
 ## Verify locally
 

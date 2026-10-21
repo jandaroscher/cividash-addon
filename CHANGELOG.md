@@ -16,6 +16,42 @@ All notable changes to this add-on are documented here. Format follows
   provisions its own components. `db.host` and `db.password` are then not
   needed. The default stays the external Postgres. See
   [docs/database.md](docs/database.md).
+- `inv_addons.cividash.register_apisix_route` (default `true`) controls the
+  APISIX route registration on its own. It no longer depends on
+  `enable_ingress`, so `enable_ingress: false` with `gateway_api.enabled: true`
+  renders the `HTTPRoute` and registers the APISIX route.
+- Chart value `ingress.annotations` (default `{}`): free-form annotations
+  rendered unchanged on the `cividash-public` Ingress, e.g. via
+  `inv_addons.cividash.helm_values`.
+
+### Breaking
+
+- Inventories with `enable_ingress: false` now run the `public_host` assert and
+  register an open APISIX route for `public_host` by default, which makes the
+  dashboard publicly reachable. Set `register_apisix_route: false` if the
+  deployment must stay internal or has no APISIX.
+- `open_http_port: false` now fails the play (see Removed).
+- Inventories without `inv_k8s.ingress_class` now get
+  `ingressClassName: traefik` instead of the cluster's default IngressClass. Set
+  `inv_k8s.ingress_class` explicitly to keep another controller. The chart
+  default `ingress.className` changed from `""` to `traefik` as well.
+
+### Changed
+
+- `public_host` is asserted whenever `enable_ingress`, `gateway_api.enabled` or
+  `register_apisix_route` is true.
+- The default ingress controller is Traefik: `ingress.className` defaults to
+  `traefik` (`inv_k8s.ingress_class` still overrides it). The HTTP -> HTTPS
+  redirect for Traefik is documented in
+  [docs/helm-chart.md](docs/helm-chart.md#routing).
+
+### Removed
+
+- The hard-coded `nginx.ingress.kubernetes.io/ssl-redirect` annotation, the
+  chart value `ingress.sslRedirect` and the inventory key `open_http_port`.
+  A leftover `open_http_port: true` is ignored, `open_http_port: false` fails
+  the play. On ingress-nginx, set `helm_values.ingress.annotations` with
+  `nginx.ingress.kubernetes.io/ssl-redirect: "false"` instead.
 
 ### Fixed
 
@@ -29,6 +65,8 @@ All notable changes to this add-on are documented here. Format follows
 - A run with `--tags addons` or `--tags addon_cividash` skipped the database,
   Keycloak SSO, M2M preflight and APISIX tasks, because `include_tasks` does
   not pass its tags to the included tasks.
+- The seed job no longer sets the default tenant's `domain` to an empty value
+  when `public_host` (`app.publicHost`) is empty.
 
 ## [1.6.1] - 2026-09-23
 
@@ -53,4 +91,5 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
+[Unreleased]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/compare/v1.6.1...main
 [1.6.1]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/tags/v1.6.1

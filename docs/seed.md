@@ -12,8 +12,9 @@ idempotent and safe to re-run on every install/upgrade:
    creates the tenant only if it doesn't exist yet (`Tenant::firstOrCreate`,
    CiviDash main repo `app/Console/Commands/TenancyBackfillCommand.php`).
 2. When `seed.setTenantDomain` (default `true`): sets the default tenant's
-   `domain` to `app.publicHost` via `php artisan tinker`, only when it
-   differs — there is no dedicated artisan command for this.
+   `domain` to `app.publicHost` via `php artisan tinker`, only when
+   `app.publicHost` is set and the domain differs — there is no dedicated
+   artisan command for this.
 3. When `seed.pages` (default `false`): `php artisan pages:seed`. Idempotent:
    `PageSeeder` finds-or-creates per DE
    slug and only updates changed fields, `NavigationSeeder` skips once header

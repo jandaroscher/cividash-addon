@@ -8,7 +8,7 @@
 | Helm via central platform task, metadata in `software_references.yml` | done | [`tasks/cividash.yml`](../tasks/cividash.yml), [`vars/software_references.yml`](../vars/software_references.yml) — see [Helm chart](helm-chart.md) |
 | Execution after core platform tasks | done | Platform-controlled; not a parameter this add-on exposes (per guideline) |
 | No root | done | All workloads using the `cividash-app` image (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`, `cividash-seed`) run as uid 82, `cividash-web` as uid 101 (`nginxinc/nginx-unprivileged`, port 8080); all pods `runAsNonRoot: true`, `capabilities.drop: [ALL]` without additions |
-| Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](../tasks/apisix.yml)) plus `Ingress`/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see [Helm chart, Routing](helm-chart.md#routing) |
+| Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](../tasks/apisix.yml)) (`register_apisix_route`) plus `Ingress` (Traefik by default)/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see [Helm chart, Routing](helm-chart.md#routing) |
 | Keycloak 6-step pattern | done | [`tasks/keycloak_sso.yml`](../tasks/keycloak_sso.yml) — see [Authentication](authentication.md) |
 | Dedicated Postgres | done | Database in the central CORE Postgres (`db.central`) or external, operator-provisioned — see [Database](database.md) |
 | Initial config data | done | `cividash-seed` Helm hook Job — see [Initial config data](seed.md) |
