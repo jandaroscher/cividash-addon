@@ -91,5 +91,5 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
-[Unreleased]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/compare/v1.6.1...main
-[1.6.1]: https://gitlab.opencode.de/regensburg_next/cividash-addon/-/tags/v1.6.1
+[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.6.1...main
+[1.6.1]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.1

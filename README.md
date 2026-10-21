@@ -12,8 +12,8 @@ repository: a local Helm chart ([`chart/cividash/`](chart/cividash/))
 installed through the central platform Helm task, plus `uri`-based Keycloak /
 APISIX Admin-API calls for SSO and gateway registration (outside Helm's
 scope). The application code lives in the
-[CiviDash main repository](https://gitlab.opencode.de/regensburg_next/cividash)
-on openCode and ships here as prebuilt container images.
+[CiviDash main repository](https://github.com/jandaroscher/cividash)
+and ships here as prebuilt container images.
 
 ## Quick start
 
@@ -193,9 +193,14 @@ created:
 
 ## Contributing, security and license
 
-The canonical repository is on openCode:
-<https://gitlab.opencode.de/regensburg_next/cividash-addon>. A mirror is
-published on GitHub: <https://github.com/jandaroscher/cividash-addon>.
+GitHub is the working and release repository:
+<https://github.com/jandaroscher/cividash-addon>. Issues, pull
+requests, Renovate dependency updates and release tags live there. The
+application images are built from the main repository's releases and
+published to GitHub Container Registry at `ghcr.io/jandaroscher`. Watch both GitHub repositories for new releases and
+security fixes. The openCode repository
+(<https://gitlab.opencode.de/regensburg_next/cividash-addon>) is a mirror;
+changes made there are not merged back.
 
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

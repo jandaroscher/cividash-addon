@@ -6,10 +6,10 @@ version: 1.6.1
 # CiviDash release the pinned images correspond to.
 appVersion: "1.0.0"
 kubeVersion: ">=1.28.0-0"
-home: https://gitlab.opencode.de/regensburg_next/cividash-addon
+home: https://github.com/jandaroscher/cividash-addon
 sources:
-  - https://gitlab.opencode.de/regensburg_next/cividash-addon
-  - https://gitlab.opencode.de/regensburg_next/cividash
+  - https://github.com/jandaroscher/cividash-addon
+  - https://github.com/jandaroscher/cividash
 maintainers:
   - name: JANDA+ROSCHER GmbH & Co. KG
     email: support@janda-roscher.de

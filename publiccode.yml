@@ -6,7 +6,7 @@ publiccodeYmlVersion: "0"
 
 name: CiviDash CIVITAS/CORE Add-on
 applicationSuite: CiviDash
-url: "https://gitlab.opencode.de/regensburg_next/cividash-addon"
+url: "https://github.com/jandaroscher/cividash-addon"
 softwareType: addon
 
 softwareVersion: 1.6.1
@@ -57,7 +57,7 @@ description:
       - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
       - Anbindung an eine externe PostgreSQL-Datenbank und S3-Medienspeicher
       - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
-    documentation: "https://gitlab.opencode.de/regensburg_next/cividash-addon/-/blob/main/README.md"
+    documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"
   en:
     shortDescription: "CIVITAS/CORE add-on for the CiviDash sustainability dashboard"
     longDescription: >
@@ -72,4 +72,4 @@ description:
       - NGSI-LD machine token via the shared api-access client
       - Connects to an external PostgreSQL database and S3 media storage
       - Idempotent database migration and initial data seed as Helm hook Jobs
-    documentation: "https://gitlab.opencode.de/regensburg_next/cividash-addon/-/blob/main/README.md"
+    documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"

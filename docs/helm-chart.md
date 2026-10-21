@@ -144,3 +144,14 @@ The CiviDash main-repo CI also publishes a **moving `civitas` tag**. It is for
 **the maintainers' test stack only** and **must not** be used in any inventory: it can move
 under a running deployment without any version bump in this repo. Pin
 inventories to an immutable CiviDash release tag such as `1.0.0` — see [Versioning and compatibility](../README.md#versioning-and-compatibility).
+
+## Security headers
+
+The chart and the Ansible tasks set no HTTP security headers. The `cividash-web` image sends
+`X-Content-Type-Options`, `X-Frame-Options` (left out on the tile embed routes) and
+`Referrer-Policy`. `Strict-Transport-Security`, `Content-Security-Policy` and
+`Permissions-Policy` belong at the platform's TLS-terminating ingress or gateway. The main
+repository's
+[security header guide](https://github.com/jandaroscher/cividash/blob/main/docs/deployment/security-headers.md)
+has recommended values, including a tested Content-Security-Policy and the exception that
+keeps tile embeds working.
