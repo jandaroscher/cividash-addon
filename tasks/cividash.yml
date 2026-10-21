@@ -95,7 +95,9 @@
 - name: "CiviDash: Reject removed open_http_port: false"
   ansible.builtin.assert:
     that:
-      - inv_addons.cividash.open_http_port | default(true) | bool
+      # An empty key (null) counts as unset.
+      - inv_addons.cividash.open_http_port | default(none) is none
+        or inv_addons.cividash.open_http_port | bool
     fail_msg: >-
       inv_addons.cividash.open_http_port was removed. On ingress-nginx, set
       helm_values.ingress.annotations."nginx.ingress.kubernetes.io/ssl-redirect"

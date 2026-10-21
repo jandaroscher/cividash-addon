@@ -94,7 +94,7 @@ all:
               # fails to render otherwise).
               default_tenant: default
               # Sets the default tenant's `domain` to public_host; only
-              # writes when it actually differs.
+              # writes when public_host is set and the domain differs.
               set_tenant_domain: true
               # Seeds the reference pages/navigation (php artisan pages:seed).
               # Off by default: only meaningful for the Regensburg reference

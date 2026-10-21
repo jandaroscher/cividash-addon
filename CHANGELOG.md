@@ -33,7 +33,8 @@ All notable changes to this add-on are documented here. Format follows
 - `open_http_port: false` now fails the play (see Removed).
 - Inventories without `inv_k8s.ingress_class` now get
   `ingressClassName: traefik` instead of the cluster's default IngressClass. Set
-  `inv_k8s.ingress_class` explicitly to keep another controller.
+  `inv_k8s.ingress_class` explicitly to keep another controller. The chart
+  default `ingress.className` changed from `""` to `traefik` as well.
 
 ### Changed
 
@@ -64,6 +65,8 @@ All notable changes to this add-on are documented here. Format follows
 - A run with `--tags addons` or `--tags addon_cividash` skipped the database,
   Keycloak SSO, M2M preflight and APISIX tasks, because `include_tasks` does
   not pass its tags to the included tasks.
+- The seed job no longer sets the default tenant's `domain` to an empty value
+  when `public_host` (`app.publicHost`) is empty.
 
 ## [1.6.1] - 2026-09-23
 
