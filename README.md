@@ -142,7 +142,7 @@ documented in `CHANGELOG.md`.
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.6.1 |
 | CIVITAS/CORE platform | 1.6.2 – 1.6.3 |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.0.0` |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.0.1` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
@@ -156,7 +156,7 @@ a floor derived from the chart's own API usage — `apps/v1`, `batch/v1` and
 **Cutting a release:** tag this repo `v1.6.x`. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.0.0. Never reference the moving `civitas` tag from an add-on
+to CiviDash 1.0.1. Never reference the moving `civitas` tag from an add-on
 release or an inventory.
 
 ## Uninstall

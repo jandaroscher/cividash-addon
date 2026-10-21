@@ -5,6 +5,11 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Security
+
+- Images pinned to CiviDash `1.0.1`, which runs on PHP 8.2.35 and fixes
+  CVE-2026-109618 and CVE-2026-109619.
+
 ### Added
 
 - Optional inventory keys `inv_addons.cividash.images.{app,web}.{registry,repository,tag}`

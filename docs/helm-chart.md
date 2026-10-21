@@ -129,9 +129,9 @@ inv_addons:
       app:
         registry: "registry.example.org"
         repository: "mirror/cividash-app"
-        tag: "1.0.0"
+        tag: "1.0.1"
       web:
-        tag: "1.0.0"
+        tag: "1.0.1"
 ```
 
 The registry is resolved in this order, first match wins:
