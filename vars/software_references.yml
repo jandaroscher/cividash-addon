@@ -21,7 +21,7 @@
 # "Versioning and compatibility"). The moving "civitas" tag is also published
 # by the CiviDash main-repo CI, but it is for the maintainers' test stack only and MUST NOT
 # be used in inventories: it can change under a running deployment without
-# any version bump here. The pinned tag corresponds to CiviDash 1.0.0.
+# any version bump here. The pinned tag corresponds to CiviDash 1.0.1.
 # These are defaults only: vars/ is loaded with include_vars, which outranks
 # inventory variables, so an inventory value for software.addon_cividash.* has no
 # effect. Override images through inv_addons.cividash.images.{app,web}.
@@ -45,9 +45,9 @@ software:
     cividash_app:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-app"
-      tag: "1.0.0"
+      tag: "1.0.1"
     # nginx image: serves the baked public assets and proxies PHP to cividash-fpm:9000.
     cividash_web:
       registry: "ghcr.io"
       repository: "jandaroscher/cividash-web"
-      tag: "1.0.0"
+      tag: "1.0.1"

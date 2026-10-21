@@ -113,9 +113,9 @@ all:
             #   app:
             #     registry: "registry.example.org"
             #     repository: "mirror/cividash-app"
-            #     tag: "1.0.0"
+            #     tag: "1.0.1"
             #   web:
-            #     tag: "1.0.0"
+            #     tag: "1.0.1"
 
             # --- Helm chart overrides ----------------------------------------
             # Passed as helm_values_rcombine to tasks/templates/k8s-helm.yml —
