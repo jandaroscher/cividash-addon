@@ -1,11 +1,11 @@
 # Mirrors main and all tags to openCode. GitHub is canonical; openCode on the
 # Free tier only offers push mirrors from GitLab, so the push starts here.
-name: mirror-opencode
+name: Mirror to openCode
 
 on:
   push:
     branches: [main]
-    tags: ['*']
+    tags: ['**']
   workflow_dispatch:
 
 concurrency:
