@@ -3,6 +3,13 @@
 All notable changes to this add-on are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.6.2] - 2026-11-04
+
+### Security
+
+- Images pinned to CiviDash `1.0.1`, which runs on PHP 8.2.35 and fixes
+  CVE-2026-109618 and CVE-2026-109619. Nothing else changes compared to 1.6.1.
+
 ## [1.6.1] - 2026-09-23
 
 First public release.
