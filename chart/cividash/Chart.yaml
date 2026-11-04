@@ -2,9 +2,9 @@ apiVersion: v2
 name: cividash
 description: CiviDash (Laravel/Filament) as a CIVITAS/CORE add-on
 type: application
-version: 1.6.1
+version: 1.6.2
 # Main-repo release the pinned civitas-<sha> images correspond to.
-appVersion: "1.0.0"
+appVersion: "1.0.1"
 kubeVersion: ">=1.28.0-0"
 home: https://gitlab.opencode.de/regensburg_next/cividash-addon
 sources:
