@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
 {{/*
 cividash-seed — initial config data after deployment (guideline: "initial
 loading of configuration data"), as a Job rather than an init script, so

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
 # =============================================================================
 # Local kind smoke for the cividash-addon.
 #

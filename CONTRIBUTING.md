@@ -19,3 +19,9 @@ person, as described in the main repository. On a squash merge, put the
 `Signed-off-by` line in the last block of the message, next to the
 `Co-authored-by` lines, with no blank line in between. The `DCO` workflow
 checks each push to `main`.
+
+The repository follows the [REUSE specification](https://reuse.software): new
+YAML, shell and template files start with an SPDX header (`reuse annotate
+--copyright "JANDA+ROSCHER GmbH & Co. KG" --license EUPL-1.2+ <file>`), files
+without comment syntax are covered by `REUSE.toml`. The `REUSE` workflow runs
+`reuse lint` on every pull request.

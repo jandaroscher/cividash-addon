@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
 {{/*
 Public Ingress: values.app.publicHost -> Service cividash-web:80.
 This route is OPEN — no auth/openid-connect annotations. The

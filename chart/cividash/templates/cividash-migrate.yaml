@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
 {{/*
 cividash-migrate — runs "php artisan migrate --force" before workloads.
 pre-install/pre-upgrade at weight 5, so it runs AFTER the weight-0 secrets
