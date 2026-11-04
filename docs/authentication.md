@@ -65,6 +65,14 @@ must be provisioned so that:
    non-empty **`tenants`** claim. With an empty claim Stellio refuses every
    request (`no access to tenant ds_open_data`) even though a token was minted.
 
+**CORE 1.8.x.** A fresh CORE 1.8.1 deploy creates `api-access` with
+`serviceAccountsEnabled = false`, and creates the tenant group (for example
+`ds_open_data`, from `inv_access.open_data_dataspace`) with the attributes
+`service` and `tenant` already set. Two operator steps are then enough: enable
+service accounts on `api-access` (1), and add the user
+`service-account-api-access` to the tenant group (3). On CORE 1.6.x the group
+attributes had to be set by hand as well.
+
 **Deploy-time preflight.** [`tasks/preflight_m2m.yml`](../tasks/preflight_m2m.yml)
 runs right after `keycloak_sso.yml` and verifies (1)–(3) against the live realm
 before any workloads are deployed: it requests a client-credentials token for

@@ -7,11 +7,15 @@ All notable changes to this add-on are documented here. Format follows
 
 ### Security
 
-- Images pinned to CiviDash `1.0.1`, which runs on PHP 8.2.35 and fixes
-  CVE-2026-109618 and CVE-2026-109619.
+- Images pinned to CiviDash `1.1.0`. It keeps the PHP 8.2.35 fix for
+  CVE-2026-109618 and CVE-2026-109619 from `1.0.1`.
 
 ### Added
 
+- Support for CIVITAS/CORE 1.7.2 to 1.8.x, tested on CORE 1.8.1. The add-on
+  version now follows the highest tested CORE minor version.
+- Images for `linux/arm64` next to `linux/amd64`, so the add-on also runs on
+  clusters with ARM nodes.
 - Optional inventory keys `inv_addons.cividash.images.{app,web}.{registry,repository,tag}`
   to override the default images. An explicit registry takes precedence over
   `inv_op_stack.private_registry.registry_full_url`.
@@ -60,6 +64,9 @@ All notable changes to this add-on are documented here. Format follows
 
 ### Fixed
 
+- Rolling updates no longer answer 502/504 for a few seconds: `cividash-web`
+  and `cividash-fpm` wait 10 seconds in `preStop`, so they keep serving until
+  their endpoints are removed.
 - Overriding images via `software.addon_cividash.*` in the inventory had no
   effect, because `include_vars` outranks inventory variables. The comment in
   `vars/software_references.yml` now points to the new `images` keys.
@@ -72,6 +79,13 @@ All notable changes to this add-on are documented here. Format follows
   not pass its tags to the included tasks.
 - The seed job no longer sets the default tenant's `domain` to an empty value
   when `public_host` (`app.publicHost`) is empty.
+
+## [1.6.2] - 2026-11-04
+
+### Security
+
+- Images pinned to CiviDash `1.0.1`, which runs on PHP 8.2.35 and fixes
+  CVE-2026-109618 and CVE-2026-109619. Nothing else changes compared to 1.6.1.
 
 ## [1.6.1] - 2026-09-23
 
@@ -96,5 +110,6 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
-[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.6.1...main
+[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.6.2...main
+[1.6.2]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.2
 [1.6.1]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.1
