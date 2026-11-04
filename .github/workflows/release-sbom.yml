@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+# Attaches the SPDX SBOMs of the pinned CiviDash images to an add-on release.
+# The add-on itself only ships Ansible tasks and a Helm chart (components in
+# docs/components.md); the images it deploys are described by the SBOMs that
+# the CiviDash release pipeline publishes. Run it manually to re-attach them.
+name: Release SBOM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Add-on release tag, e.g. v1.8.0
+        required: true
+        type: string
+
+permissions:
+  contents: write  # upload the SBOMs as release assets
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+
+      - name: Copy the image SBOMs from the CiviDash release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          app=$(yq '.software.addon_cividash.cividash_app.tag' vars/software_references.yml)
+          web=$(yq '.software.addon_cividash.cividash_web.tag' vars/software_references.yml)
+          mkdir sbom
+          gh release download "v$app" --repo jandaroscher/cividash --dir sbom \
+            --pattern "cividash-app-$app.spdx.json"
+          gh release download "v$web" --repo jandaroscher/cividash --dir sbom \
+            --pattern "cividash-web-$web.spdx.json"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber sbom/*.spdx.json

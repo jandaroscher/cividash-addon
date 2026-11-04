@@ -207,6 +207,7 @@ created:
 - [Database](docs/database.md) — central CORE Postgres or external PostgreSQL
 - [Initial config data](docs/seed.md) — the `cividash-seed` hook Job
 - [Troubleshooting](docs/troubleshooting.md)
+- [Components](docs/components.md) — what a deployment consists of, and the image SBOMs attached to each release
 - [Conformance with the CORE add-on guideline](docs/core-guideline-conformance.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 
