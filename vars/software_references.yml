@@ -36,7 +36,7 @@ software:
     # undefined). helm_chart_version here is metadata for humans/tooling only.
     helm_chart_name: "cividash"
     helm_release_name: "cividash"
-    helm_chart_version: "1.6.1"
+    helm_chart_version: "1.6.2"
 
     # php-fpm image: the full Laravel/Filament application.
     cividash_app:
