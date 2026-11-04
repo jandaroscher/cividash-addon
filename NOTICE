@@ -11,5 +11,5 @@ Mirror: https://gitlab.opencode.de/regensburg_next/cividash-addon
 This add-on contains deployment logic only (Ansible tasks and a Helm chart).
 The container images it deploys are built from the CiviDash main repository,
 https://github.com/jandaroscher/cividash. Its NOTICE applies to those
-images; their SPDX SBOMs are attached to every add-on release (see
+images; from add-on 1.8.0 on, their SPDX SBOMs are attached to every add-on release (see
 docs/components.md).
