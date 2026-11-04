@@ -1,0 +1,11 @@
+version = 1
+SPDX-PackageName = "CiviDash CIVITAS/CORE Add-on"
+SPDX-PackageDownloadLocation = "https://github.com/jandaroscher/cividash-addon"
+
+# Files that carry no SPDX header of their own (JSON, images, Markdown).
+# Files with a header keep it.
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2025-2026 JANDA+ROSCHER GmbH & Co. KG"
+SPDX-License-Identifier = "EUPL-1.2+"
