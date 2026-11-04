@@ -13,3 +13,7 @@ Before opening a pull request, run `helm lint chart/cividash`,
 `helm template cividash chart/cividash` (see [Helm chart](docs/helm-chart.md))
 and `ansible-playbook --syntax-check dev/syntax-check.yml`. CI on GitHub runs
 `helm lint` and the Ansible syntax check.
+
+Every commit on `main` needs a Developer Certificate of Origin sign-off by a
+person, as described in the main repository. The `DCO` workflow checks each
+push to `main`.
