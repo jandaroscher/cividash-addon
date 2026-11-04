@@ -64,9 +64,9 @@ All notable changes to this add-on are documented here. Format follows
 
 ### Fixed
 
-- Rolling updates no longer answer 502/504 for a few seconds: `cividash-web`
-  and `cividash-fpm` wait 10 seconds in `preStop`, so they keep serving until
-  their endpoints are removed.
+- Fewer 502/504 responses during rolling updates: `cividash-web` and
+  `cividash-fpm` wait 10 seconds in `preStop`, so they keep serving while
+  their endpoint removal propagates.
 - Overriding images via `software.addon_cividash.*` in the inventory had no
   effect, because `include_vars` outranks inventory variables. The comment in
   `vars/software_references.yml` now points to the new `images` keys.

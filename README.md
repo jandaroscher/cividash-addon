@@ -159,6 +159,11 @@ Installations on CORE 1.6.x stay on add-on `1.6.x`. Before upgrading to
 (Traefik as default ingress class, the separate APISIX route switch,
 `open_http_port`) and the operator steps for `api-access` in
 [Authentication](docs/authentication.md#operator-prerequisites-m2m--api-access).
+During the upgrade from CiviDash 1.0.x to 1.1.0, new `cividash-web` pods can
+serve the 1.1.0 frontend while old `cividash-fpm` pods still run 1.0.x, which
+has no `/api/v1` routes. Dashboards opened in that window of the rollout may
+fail to load data until the page is reloaded; plan the upgrade outside peak
+hours.
 
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
 allowed"), because the CORE inventory schema (`InvAddons` in
