@@ -13,3 +13,9 @@ Before opening a pull request, run `helm lint chart/cividash`,
 `helm template cividash chart/cividash` (see [Helm chart](docs/helm-chart.md))
 and `ansible-playbook --syntax-check dev/syntax-check.yml`. CI on GitHub runs
 `helm lint` and the Ansible syntax check.
+
+Every commit on `main` needs a Developer Certificate of Origin sign-off by a
+person, as described in the main repository. On a squash merge, put the
+`Signed-off-by` line in the last block of the message, next to the
+`Co-authored-by` lines, with no blank line in between. The `DCO` workflow
+checks each push to `main`.
