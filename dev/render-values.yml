@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+---
+# Renders the Helm values a CORE deploy hands to chart/cividash: the add-on's
+# default_inventory.yml plus the keys an operator adds (vaulted S3/DB
+# credentials, Gateway API, a Traefik annotation via helm_values), through
+# templates/values.yaml.j2 the same way core_platform/tasks/templates/k8s-helm.yml
+# does (lookup template | from_yaml | combine helm_values). CI feeds the result
+# to helm template + kubeconform (.github/workflows/ansible-syntax.yml).
+#
+#   ansible-playbook dev/render-values.yml -e DOMAIN=example.org \
+#     -e ENVIRONMENT=ci -e cividash_values_out=/tmp/core-values.yaml
+- name: Render CORE Helm values for chart/cividash
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/software_references.yml
+  vars:
+    # Normally resolved by tasks/database.yml.
+    cividash_db:
+      host: cividash-postgres.core-postgres.svc.cluster.local
+      port: 5432
+      database: cividash
+      username: cividash
+      password: ci-db-password
+    inv_k8s:
+      ingress_class: traefik
+      cert_manager:
+        issuer_name: letsencrypt
+    inv_op_stack:
+      private_registry: {}
+    cividash_operator_inventory:
+      s3:
+        access_key_id: ci-access-key
+        secret_access_key: ci-secret-key
+      gateway_api:
+        enabled: true
+        parentRefs:
+          - name: "{{ ENVIRONMENT }}-gateway"
+            namespace: gateway-system
+      helm_values:
+        ingress:
+          annotations:
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  tasks:
+    - name: Load the add-on default inventory
+      ansible.builtin.include_vars:
+        file: ../default_inventory.yml
+        name: cividash_default_inventory
+
+    - name: Write the rendered values
+      vars:
+        inv_addons:
+          cividash: >-
+            {{ cividash_default_inventory.all.children.controller.vars.inv_addons.cividash
+            | combine(cividash_operator_inventory, recursive=True) }}
+      ansible.builtin.copy:
+        content: >-
+          {{ lookup('template', '../templates/values.yaml.j2') | from_yaml
+          | combine(inv_addons.cividash.helm_values, recursive=True) | to_nice_yaml }}
+        dest: "{{ cividash_values_out }}"
+        mode: "0600"
