@@ -172,7 +172,10 @@ and `addons`. The platform playbook merges and uses the keys as intended;
 validate the inventory without the `cividash` block, or skip `cc_cli validate`
 for it.
 
-**Cutting a release:** tag this repo `v1.8.x`. Images are pinned to an
+**Cutting a release:** tag this repo `v1.8.x` and publish a GitHub release for
+the tag. Publishing runs the `Release SBOM` workflow, which attaches the image
+SBOMs; a pushed tag alone does not. If it did not run, start it by hand with
+the tag. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
 to CiviDash 1.1.0. Never reference the moving `civitas` tag from an add-on
@@ -207,6 +210,7 @@ created:
 - [Database](docs/database.md) — central CORE Postgres or external PostgreSQL
 - [Initial config data](docs/seed.md) — the `cividash-seed` hook Job
 - [Troubleshooting](docs/troubleshooting.md)
+- [Components](docs/components.md) — what a deployment consists of, and the image SBOMs attached to each release
 - [Conformance with the CORE add-on guideline](docs/core-guideline-conformance.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 

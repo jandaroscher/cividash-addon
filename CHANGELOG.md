@@ -16,6 +16,9 @@ All notable changes to this add-on are documented here. Format follows
   version now follows the highest tested CORE minor version.
 - Images for `linux/arm64` next to `linux/amd64`, so the add-on also runs on
   clusters with ARM nodes.
+- Every release gets the SPDX SBOMs of the pinned `cividash-app` and
+  `cividash-web` images attached (workflow `Release SBOM`), and
+  [docs/components.md](docs/components.md) lists what a deployment consists of.
 - Optional inventory keys `inv_addons.cividash.images.{app,web}.{registry,repository,tag}`
   to override the default images. An explicit registry takes precedence over
   `inv_op_stack.private_registry.registry_full_url`.
