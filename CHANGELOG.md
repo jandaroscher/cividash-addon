@@ -18,8 +18,8 @@ All notable changes to this add-on are documented here. Format follows
 
 - `tasks/keycloak_sso.yml` uses fully qualified module names and
   add-on-prefixed fact names (`_cividash_admin_username`,
-  `_cividash_admin_password`, `_cividash_oidc_client_secret`), so it no
-  longer overwrites the CORE facts `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
+  `_cividash_admin_password`, `_cividash_oidc_client_secret`) for its own
+  credentials.
 - The chart declares an `icon`.
 
 ## [1.8.0] - 2026-11-05
