@@ -52,6 +52,12 @@ spec:
                 name: cividash-oidc-secret
             - secretRef:
                 name: cividash-db-secret
+          # Keep serving while the endpoint removal reaches kube-proxy and the
+          # gateway; without it, rollouts briefly answer 502/504.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "10"]
           readinessProbe:
             tcpSocket:
               port: 9000

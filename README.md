@@ -133,30 +133,49 @@ built by the CiviDash main repository — see [Helm chart, Images](docs/helm-cha
 
 ## Versioning and compatibility
 
-The add-on's Helm chart version (`chart/cividash/Chart.yaml`) follows the
-CORE platform's minor version — add-on `1.6.x` targets CORE `1.6.x`. The
-patch digit is independent. Breaking changes to the inventory structure are
+The add-on's major and minor version (`chart/cividash/Chart.yaml`) follow the
+highest CORE version it is tested against: add-on `1.8.x` is tested on CORE
+`1.8.x` and also supports CORE `1.7.2` and later. The patch digit is
+independent. Breaking changes to the inventory structure are
 documented in `CHANGELOG.md`.
 
 | Component | Version |
 | --- | --- |
-| cividash add-on (this repo/chart) | 1.6.1 |
-| CIVITAS/CORE platform | 1.6.2 – 1.6.3 |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.0.1` |
+| cividash add-on (this repo/chart) | 1.8.0 |
+| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.0`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
-Kubernetes >= 1.28 is the tested/supported floor (CORE 1.6.x platforms), not
+Kubernetes >= 1.28 is the supported floor, not
 a floor derived from the chart's own API usage — `apps/v1`, `batch/v1` and
 `networking.k8s.io/v1 Ingress` only require Kubernetes >= 1.19. With
 `inv_addons.cividash.gateway_api.enabled: true` (chart value
 `gatewayApi.enabled`) the chart additionally needs Gateway API CRDs
 >= v1.0 installed on the cluster, independent of the Kubernetes version.
 
-**Cutting a release:** tag this repo `v1.6.x`. Images are pinned to an
+Installations on CORE 1.6.x stay on add-on `1.6.x`. Before upgrading to
+1.8.x, read the Breaking section of the 1.8.0 entry in `CHANGELOG.md`
+(Traefik as default ingress class, the separate APISIX route switch,
+`open_http_port`) and the operator steps for `api-access` in
+[Authentication](docs/authentication.md#operator-prerequisites-m2m--api-access).
+During the upgrade from CiviDash 1.0.x to 1.1.0, new `cividash-web` pods can
+serve the 1.1.0 frontend while old `cividash-fpm` pods still run 1.0.x, which
+has no `/api/v1` routes. Dashboards opened in that window of the rollout may
+fail to load data until the page is reloaded; plan the upgrade outside peak
+hours.
+
+`cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
+allowed"), because the CORE inventory schema (`InvAddons` in
+`core_platform/inventory_schema.json`, CORE 1.6 to 1.8) only allows `import`
+and `addons`. The platform playbook merges and uses the keys as intended;
+validate the inventory without the `cividash` block, or skip `cc_cli validate`
+for it.
+
+**Cutting a release:** tag this repo `v1.8.x`. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.0.1. Never reference the moving `civitas` tag from an add-on
+to CiviDash 1.1.0. Never reference the moving `civitas` tag from an add-on
 release or an inventory.
 
 ## Uninstall

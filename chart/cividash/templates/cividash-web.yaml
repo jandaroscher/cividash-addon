@@ -45,6 +45,12 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          # Keep serving while the endpoint removal reaches kube-proxy and the
+          # gateway; without it, rollouts briefly answer 502/504.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "10"]
           readinessProbe:
             httpGet:
               path: /up
