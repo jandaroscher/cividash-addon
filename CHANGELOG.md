@@ -5,6 +5,8 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-05
+
 ### Security
 
 - Images pinned to CiviDash `1.1.0`. It keeps the PHP 8.2.35 fix for
@@ -113,6 +115,7 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
-[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.6.2...main
+[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.8.0...main
+[1.8.0]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.0
 [1.6.2]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.2
 [1.6.1]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.1
