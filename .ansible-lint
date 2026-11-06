@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+---
+profile: production
+exclude_paths:
+  # Shared helpers that CIVITAS/CORE provides at deploy time (core_platform/
+  # tasks/templates/); they are not part of this repo, and load-failure cannot
+  # be skipped by rule.
+  - tasks/templates/
+  # Helm templates are Go templates, not plain YAML; helm lint covers them.
+  - chart/

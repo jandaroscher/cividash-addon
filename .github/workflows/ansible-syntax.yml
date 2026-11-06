@@ -16,18 +16,28 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.22.0
-      - name: Install ansible-core
+      - name: Install ansible-core, ansible-lint and kubeconform
+        env:
+          KUBECONFORM_VERSION: v0.8.0
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
         run: |
-          pip install ansible-core
-          ansible-galaxy collection install kubernetes.core
+          pip install ansible-core==2.22.0 ansible-lint==26.11.0
+          ansible-galaxy collection install kubernetes.core==6.6.0
+          curl -fsSLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf kubeconform.tar.gz -C "$RUNNER_TEMP/bin" kubeconform
+          rm kubeconform.tar.gz
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Ansible syntax check
         run: ansible-playbook --syntax-check dev/syntax-check.yml
       - name: Render default_inventory.yml
@@ -42,7 +52,33 @@ jobs:
           addon = yaml.safe_load(out)["all"]["children"]["controller"]["vars"]["inv_addons"]["cividash"]
           assert addon["ns_name"] == "ci-cividash-stack", addon["ns_name"]
           PY
+      - name: Ansible lint
+        run: ansible-lint
+      - name: Render CORE Helm values from templates/values.yaml.j2
+        run: >-
+          ansible-playbook dev/render-values.yml -e DOMAIN=example.org
+          -e ENVIRONMENT=ci -e cividash_values_out="$RUNNER_TEMP/core-values.yaml"
       - name: Helm lint
         run: |
-          helm lint chart/cividash
-          helm lint chart/cividash -f chart/cividash/ci/smoke-values.yaml
+          helm lint --strict chart/cividash
+          helm lint --strict chart/cividash -f chart/cividash/ci/smoke-values.yaml
+          helm lint --strict chart/cividash -f "$RUNNER_TEMP/core-values.yaml"
+      - name: Validate rendered manifests with kubeconform
+        # Kubernetes 1.34 is the newest version CORE 1.8 is tested on
+        # (CORE docs, Deployment Requirements: 1.31 to 1.34). HTTPRoute is a
+        # CRD, so it is validated against the datreeio CRDs-catalog instead of
+        # being skipped with -ignore-missing-schemas. Both schema sources are
+        # pinned to a commit.
+        env:
+          K8S_SCHEMAS: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/86d045595d3f93b703bbf439cf9eb4bd6830d58f
+          CRD_SCHEMAS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/041baf4c1d3740ca21461cab765e7432ecd073ef
+        run: |
+          set -o pipefail
+          for values in chart/cividash/values.yaml "$RUNNER_TEMP/core-values.yaml"; do
+            echo "::group::$values"
+            helm template cividash chart/cividash -f "$values" \
+              | kubeconform -strict -summary -kubernetes-version 1.34.0 \
+                  -schema-location "$K8S_SCHEMAS/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json" \
+                  -schema-location "$CRD_SCHEMAS/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+            echo "::endgroup::"
+          done

@@ -5,6 +5,23 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- CI lints the Ansible content with `ansible-lint` (profile `production`),
+  renders the Helm values a CORE deploy produces from
+  `templates/values.yaml.j2` (`dev/render-values.yml`), and validates
+  `helm template` output for the chart defaults and those values with
+  `kubeconform -strict` against Kubernetes 1.34, including the Gateway API
+  `HTTPRoute`. `helm lint` now runs with `--strict`.
+
+### Changed
+
+- `tasks/keycloak_sso.yml` uses fully qualified module names and
+  add-on-prefixed fact names (`_cividash_admin_username`,
+  `_cividash_admin_password`, `_cividash_oidc_client_secret`) for its own
+  credentials.
+- The chart declares an `icon`.
+
 ## [1.8.0] - 2026-11-05
 
 ### Security

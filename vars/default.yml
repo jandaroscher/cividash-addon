@@ -9,7 +9,7 @@ addon_dir: "addons/cividash_addon/"
 # inv_addons.cividash.oidc_client_id is unset. Used by the APP for the
 # Socialite admin SSO only, NOT by APISIX: the APISIX route is open; admin auth
 # is handled by the app (see docs/authentication.md).
-IDM_CLIENT_CIVIDASH: "cividash"
+IDM_CLIENT_CIVIDASH: "cividash"  # noqa: var-naming[pattern] -- CORE-style IDM_CLIENT* name, also read by default_inventory.yml and settable via extra vars
 
 # -----------------------------------------------------------------------------
 # Database connection — role defaults.
