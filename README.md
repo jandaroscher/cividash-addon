@@ -141,7 +141,7 @@ documented in `CHANGELOG.md`.
 
 | Component | Version |
 | --- | --- |
-| cividash add-on (this repo/chart) | 1.8.0 |
+| cividash add-on (this repo/chart) | 1.8.1 |
 | CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
 | CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.2`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
