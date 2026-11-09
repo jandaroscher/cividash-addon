@@ -7,10 +7,11 @@ All notable changes to this add-on are documented here. Format follows
 
 ### Security
 
-- Images pinned to CiviDash `1.1.2`. Since `1.1.0`, CiviDash sets no session
-  cookie and stores no personal data for anonymous visitors, serves the admin
-  font locally instead of from Bunny Fonts, and updates Symfony components
-  for the November security release.
+- Images pinned to CiviDash `1.1.2`. Since `1.1.0`, the public dashboard
+  pages and the public API set no session cookie and store no session for
+  anonymous visitors (the admin login still starts one), the admin font is
+  served locally instead of from Bunny Fonts, and the Symfony components are
+  updated for the November security release.
 
 ### Added
 
