@@ -5,6 +5,13 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Security
+
+- Images pinned to CiviDash `1.1.2`. Since `1.1.0`, CiviDash sets no session
+  cookie and stores no personal data for anonymous visitors, serves the admin
+  font locally instead of from Bunny Fonts, and updates Symfony components
+  for the November security release.
+
 ### Added
 
 - CI lints the Ansible content with `ansible-lint` (profile `production`),

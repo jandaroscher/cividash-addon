@@ -143,7 +143,7 @@ documented in `CHANGELOG.md`.
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.8.0 |
 | CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.0`, `linux/amd64` and `linux/arm64` |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.2`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
@@ -178,7 +178,7 @@ SBOMs; a pushed tag alone does not. If it did not run, start it by hand with
 the tag. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.1.0. Never reference the moving `civitas` tag from an add-on
+to CiviDash 1.1.2. Never reference the moving `civitas` tag from an add-on
 release or an inventory.
 
 ## Uninstall
