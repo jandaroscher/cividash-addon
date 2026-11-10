@@ -74,7 +74,8 @@ are absent or commented out there fall back to `default()` values in
 | `db.port` / `db.database` / `db.username` | `5432` / `cividash` / `cividash` | Optional overrides |
 | `db.password` | — | **Required** unless `db.central`, vaulted |
 | `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
-| `s3.{endpoint,bucket,public_url,region}` | see `default_inventory.yml` | S3 media storage |
+| `s3.{endpoint,bucket,region}` | see `default_inventory.yml` | S3 media storage. Use a bucket for CiviDash media only; it can stay private |
+| `s3.public_url` | `""` | Empty: media is served by the dashboard under `/storage`. A bucket URL makes browsers load media from the bucket directly, which needs anonymous read on it |
 | `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
@@ -164,6 +165,14 @@ serve the 1.1.0 frontend while old `cividash-fpm` pods still run 1.0.x, which
 has no `/api/v1` routes. Dashboards opened in that window of the rollout may
 fail to load data until the page is reloaded; plan the upgrade outside peak
 hours.
+
+Media on S3: images up to CiviDash 1.1.3 stored objects under the container path
+(`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
+From the next CiviDash release, objects sit at the bucket root and the dashboard
+serves them under `/storage`. When upgrading an installation that already has
+uploads, move the objects to the bucket root (strip that prefix) or upload them
+again, re-import theme bundles, and leave `s3.public_url` empty unless the
+bucket stays public on purpose.
 
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
 allowed"), because the CORE inventory schema (`InvAddons` in

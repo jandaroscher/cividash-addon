@@ -175,7 +175,12 @@ all:
             s3:
               endpoint: "https://s3.{{ DOMAIN }}"
               bucket: "cividash"
-              public_url: "https://s3.{{ DOMAIN }}/cividash"
+              # Empty: browsers load media from the dashboard under /storage and
+              # the app reads the bucket with its own credentials, so the bucket
+              # can stay private. Use it for public media only. Set the bucket URL
+              # instead (e.g. "https://s3.{{ DOMAIN }}/cividash") only if the bucket
+              # allows anonymous read.
+              public_url: ""
               region: "us-east-1"
               # access_key_id: ""   # REQUIRED, supply via vaulted inventory
               # secret_access_key: ""  # REQUIRED, supply via vaulted inventory
