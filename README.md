@@ -144,7 +144,7 @@ documented in `CHANGELOG.md`.
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.8.1 |
 | CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.2`, `linux/amd64` and `linux/arm64` |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.3`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
@@ -166,9 +166,9 @@ has no `/api/v1` routes. Dashboards opened in that window of the rollout may
 fail to load data until the page is reloaded; plan the upgrade outside peak
 hours.
 
-Media on S3: images up to CiviDash 1.1.3 stored objects under the container path
+Media on S3: images up to CiviDash 1.1.2 stored objects under the container path
 (`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
-From the next CiviDash release, objects sit at the bucket root and the dashboard
+From CiviDash 1.1.3, objects sit at the bucket root and the dashboard
 serves them under `/storage`. When upgrading an installation that already has
 uploads, move the objects to the bucket root (strip that prefix) or upload them
 again, re-import theme bundles, and leave `s3.public_url` empty unless the
@@ -187,7 +187,7 @@ SBOMs; a pushed tag alone does not. If it did not run, start it by hand with
 the tag. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.1.2. Never reference the moving `civitas` tag from an add-on
+to CiviDash 1.1.3. Never reference the moving `civitas` tag from an add-on
 release or an inventory.
 
 ## Uninstall
