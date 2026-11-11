@@ -109,9 +109,9 @@ seed:
   # Set the default tenant's `domain` to app.publicHost. Only writes when
   # app.publicHost is set and the domain actually differs.
   setTenantDomain: true
-  # Off by default: seeds the reference pages/navigation (php artisan
-  # pages:seed). Idempotent, safe to leave on, but only meaningful for the
-  # Regensburg reference content. Requires defaultTenant: default.
+  # Off by default: seeds neutral example pages and navigation (home,
+  # contact, imprint, privacy; php artisan pages:seed) to replace with your
+  # own. Idempotent. Requires defaultTenant: default.
   pages: false
   # Non-empty: seeds Tiles/Categories/Metrics from a dashboard.json URL
   # (php artisan dashboard:seed --url=...). Idempotent. Empty = skipped.

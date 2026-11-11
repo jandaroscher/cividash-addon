@@ -101,8 +101,9 @@ all:
               # writes when public_host is set and the domain differs.
               set_tenant_domain: true
               # Seeds the reference pages/navigation (php artisan pages:seed).
-              # Off by default: only meaningful for the Regensburg reference
-              # content. Requires default_tenant: default.
+              # Off by default: the pages are neutral example content (home,
+              # contact, imprint, privacy) to replace with your own.
+              # Requires default_tenant: default.
               pages: false
               # Non-empty: seeds Tiles/Categories/Metrics from this
               # dashboard.json URL (php artisan dashboard:seed --url=...).
