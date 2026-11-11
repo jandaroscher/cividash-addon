@@ -56,6 +56,9 @@ jobs:
 
   opencode-release:
     needs: [attach, mirror]
+    # Also when the mirror run was cancelled: a missing tag then fails the
+    # POST visibly instead of skipping the release silently.
+    if: ${{ !cancelled() && needs.attach.result == 'success' }}
     permissions:
       contents: read
     uses: ./.github/workflows/opencode-releases.yml
