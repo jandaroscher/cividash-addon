@@ -11,6 +11,8 @@ on:
     branches: [main]
     tags: ['**']
   workflow_dispatch:
+  # release-sbom.yml calls this before it creates the openCode release.
+  workflow_call:
 
 concurrency:
   group: mirror-opencode
