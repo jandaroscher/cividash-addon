@@ -6,7 +6,8 @@ workloads created by the same `helm upgrade --install`), per guideline:
 "initial loading of configuration data" via an add-on-local step after
 deployment. A Job, not an init script. Gated by `seed.enabled`
 (default `true`, `inv_addons.cividash.seed.enabled`). Steps, all
-idempotent and safe to re-run on every install/upgrade:
+idempotent and run on every install/upgrade; step 3 resets edited pages
+(see there):
 
 1. `php artisan tenancy:backfill --default-tenant={{ seed.defaultTenant }}` —
    creates the tenant only if it doesn't exist yet (`Tenant::firstOrCreate`,
