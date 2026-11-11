@@ -74,7 +74,8 @@ are absent or commented out there fall back to `default()` values in
 | `db.port` / `db.database` / `db.username` | `5432` / `cividash` / `cividash` | Optional overrides |
 | `db.password` | — | **Required** unless `db.central`, vaulted |
 | `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
-| `s3.{endpoint,bucket,public_url,region}` | see `default_inventory.yml` | S3 media storage |
+| `s3.{endpoint,bucket,region}` | see `default_inventory.yml` | S3 media storage. Use a bucket for CiviDash media only; it can stay private |
+| `s3.public_url` | `""` | Empty: media is served by the dashboard under `/storage`. A bucket URL makes browsers load media from the bucket directly, which needs anonymous read on it |
 | `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
@@ -141,9 +142,9 @@ documented in `CHANGELOG.md`.
 
 | Component | Version |
 | --- | --- |
-| cividash add-on (this repo/chart) | 1.8.1 |
+| cividash add-on (this repo/chart) | 1.8.2 |
 | CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.2`, `linux/amd64` and `linux/arm64` |
+| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.3`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
 
@@ -165,6 +166,19 @@ has no `/api/v1` routes. Dashboards opened in that window of the rollout may
 fail to load data until the page is reloaded; plan the upgrade outside peak
 hours.
 
+Media on S3: images up to CiviDash 1.1.2 stored objects under the container path
+(`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
+From CiviDash 1.1.3, objects sit at the bucket root and the dashboard
+serves them under `/storage`. When upgrading an installation that already has
+uploads, stop uploading media, then copy (do not move) the objects to the
+bucket root, stripping that prefix, so pods still on 1.1.2 keep finding them
+during the rollout. Check the copies, upgrade, and delete the prefixed objects
+only once all pods run 1.1.3. Alternatively, upload the media again. While
+old `cividash-web` pods still serve requests next to new `cividash-fpm` pods,
+media under `/storage` can fail to load until the rollout completes. Re-import
+theme bundles, and leave `s3.public_url` empty unless the bucket stays public
+on purpose.
+
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
 allowed"), because the CORE inventory schema (`InvAddons` in
 `core_platform/inventory_schema.json`, CORE 1.6 to 1.8) only allows `import`
@@ -178,7 +192,7 @@ SBOMs; a pushed tag alone does not. If it did not run, start it by hand with
 the tag. Images are pinned to an
 immutable CiviDash release tag in
 [`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.1.2. Never reference the moving `civitas` tag from an add-on
+to CiviDash 1.1.3. Never reference the moving `civitas` tag from an add-on
 release or an inventory.
 
 ## Uninstall
