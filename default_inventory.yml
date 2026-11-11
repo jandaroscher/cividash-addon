@@ -102,7 +102,9 @@ all:
               set_tenant_domain: true
               # Seeds the reference pages/navigation (php artisan pages:seed).
               # Off by default: the pages are neutral example content (home,
-              # contact, imprint, privacy) to replace with your own.
+              # contact, imprint, privacy) to replace with your own. Runs on
+              # every deploy and resets edited pages with the same slugs, so
+              # turn it off again after the first seed.
               # Requires default_tenant: default.
               pages: false
               # Non-empty: seeds Tiles/Categories/Metrics from this
