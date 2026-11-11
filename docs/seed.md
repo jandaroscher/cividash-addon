@@ -6,7 +6,8 @@ workloads created by the same `helm upgrade --install`), per guideline:
 "initial loading of configuration data" via an add-on-local step after
 deployment. A Job, not an init script. Gated by `seed.enabled`
 (default `true`, `inv_addons.cividash.seed.enabled`). Steps, all
-idempotent and safe to re-run on every install/upgrade:
+idempotent and run on every install/upgrade; step 3 resets edited pages
+(see there):
 
 1. `php artisan tenancy:backfill --default-tenant={{ seed.defaultTenant }}` —
    creates the tenant only if it doesn't exist yet (`Tenant::firstOrCreate`,
@@ -18,7 +19,9 @@ idempotent and safe to re-run on every install/upgrade:
 3. When `seed.pages` (default `false`): `php artisan pages:seed`. Idempotent:
    `PageSeeder` finds-or-creates per DE
    slug and only updates changed fields, `NavigationSeeder` skips once header
-   navigation items exist.
+   navigation items exist. Changed fields include edits made in the admin
+   panel: a page with a seeded slug is reset on every run. Turn `seed.pages`
+   off again after the first seed.
 4. When `seed.dashboardJsonUrl` is non-empty (default empty): `php artisan
    dashboard:seed --url=...`. Idempotent:
    `CategorySeeder`/`TileSeeder` find-or-create per slug/title and only
