@@ -5,6 +5,17 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-11-11
+
+### Fixed
+
+- Images pinned to CiviDash `1.1.3`, which serves uploaded media under
+  `/storage` itself, so the S3 bucket can stay private.
+  `inv_addons.cividash.s3.public_url` now defaults to `""` (media through the
+  dashboard) instead of the bucket URL. Installations with media uploaded
+  before 1.1.3 must copy the objects to the bucket root; see the upgrade note
+  in the README.
+
 ## [1.8.1] - 2026-11-09
 
 ### Security
@@ -142,7 +153,8 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
-[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.8.1...main
+[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.8.2...main
+[1.8.2]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.2
 [1.8.1]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.1
 [1.8.0]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.0
 [1.6.2]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.6.2

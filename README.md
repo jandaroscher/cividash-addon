@@ -142,7 +142,7 @@ documented in `CHANGELOG.md`.
 
 | Component | Version |
 | --- | --- |
-| cividash add-on (this repo/chart) | 1.8.1 |
+| cividash add-on (this repo/chart) | 1.8.2 |
 | CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
 | CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.3`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
@@ -170,9 +170,11 @@ Media on S3: images up to CiviDash 1.1.2 stored objects under the container path
 (`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
 From CiviDash 1.1.3, objects sit at the bucket root and the dashboard
 serves them under `/storage`. When upgrading an installation that already has
-uploads, move the objects to the bucket root (strip that prefix) or upload them
-again, re-import theme bundles, and leave `s3.public_url` empty unless the
-bucket stays public on purpose.
+uploads, copy (do not move) the objects to the bucket root, stripping that
+prefix, before the upgrade, so pods still on 1.1.2 keep finding them during the
+rollout. Avoid uploads until all pods run 1.1.3, then delete the prefixed copies,
+or upload the media again instead. Re-import theme bundles, and leave
+`s3.public_url` empty unless the bucket stays public on purpose.
 
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
 allowed"), because the CORE inventory schema (`InvAddons` in

@@ -179,7 +179,8 @@ all:
               # the app reads the bucket with its own credentials, so the bucket
               # can stay private. Use it for public media only. Set the bucket URL
               # instead (e.g. "https://s3.{{ DOMAIN }}/cividash") only if the bucket
-              # allows anonymous read.
+              # allows anonymous read. CiviDash images older than 1.1.3 cannot
+              # serve media themselves and always need the bucket URL here.
               public_url: ""
               region: "us-east-1"
               # access_key_id: ""   # REQUIRED, supply via vaulted inventory
