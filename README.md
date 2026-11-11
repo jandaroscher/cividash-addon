@@ -175,8 +175,9 @@ bucket root, stripping that prefix, so pods still on 1.1.2 keep finding them
 during the rollout. Check the copies, upgrade, and delete the prefixed objects
 only once all pods run 1.1.3. Alternatively, upload the media again. While
 old `cividash-web` pods still serve requests next to new `cividash-fpm` pods,
-media under `/storage` can fail to load until the rollout completes. Re-import theme bundles, and leave
-`s3.public_url` empty unless the bucket stays public on purpose.
+media under `/storage` can fail to load until the rollout completes. Re-import
+theme bundles, and leave `s3.public_url` empty unless the bucket stays public
+on purpose.
 
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
 allowed"), because the CORE inventory schema (`InvAddons` in
