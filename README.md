@@ -170,10 +170,10 @@ Media on S3: images up to CiviDash 1.1.2 stored objects under the container path
 (`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
 From CiviDash 1.1.3, objects sit at the bucket root and the dashboard
 serves them under `/storage`. When upgrading an installation that already has
-uploads, copy (do not move) the objects to the bucket root, stripping that
-prefix, before the upgrade, so pods still on 1.1.2 keep finding them during the
-rollout. Avoid uploads until all pods run 1.1.3, then delete the prefixed copies,
-or upload the media again instead. Re-import theme bundles, and leave
+uploads, stop uploading media, then copy (do not move) the objects to the
+bucket root, stripping that prefix, so pods still on 1.1.2 keep finding them
+during the rollout. Check the copies, upgrade, and delete the prefixed objects
+only once all pods run 1.1.3. Alternatively, upload the media again. Re-import theme bundles, and leave
 `s3.public_url` empty unless the bucket stays public on purpose.
 
 `cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
