@@ -46,3 +46,17 @@ jobs:
           gh release download "v$web" --repo jandaroscher/cividash --dir sbom \
             --pattern "cividash-web-$web.spdx.json"
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber sbom/*.spdx.json
+
+  mirror:
+    # The tag must be on openCode before the openCode release can point at it.
+    permissions:
+      contents: read
+    uses: ./.github/workflows/mirror-opencode.yml
+    secrets: inherit
+
+  opencode-release:
+    needs: [attach, mirror]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/opencode-releases.yml
+    secrets: inherit
