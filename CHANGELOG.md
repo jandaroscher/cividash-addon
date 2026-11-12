@@ -5,6 +5,20 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `CIVITAS_API_URL` now ends in `/context/ngsi-ld/v1`. CORE rewrites
+  `/context/ngsi-ld/*` to Stellio's `/ngsi-ld/*`, so without `/v1` every
+  NGSI-LD call from CiviDash returned 404. Existing installations also need
+  the CiviDash release that migrates the stored URL.
+- A private platform CA (`inv_k8s.ingress.ca_path`) is passed to the chart
+  (`platformCa`), so the PHP pods can request tokens from Keycloak and call
+  APISIX on platforms with a self-signed certificate.
+
+### Changed
+
+- Tested on CORE 1.8.2; NGSI-LD sync needs CORE 1.8.2 or later within 1.8.x.
+
 ## [1.8.2] - 2026-11-11
 
 ### Fixed

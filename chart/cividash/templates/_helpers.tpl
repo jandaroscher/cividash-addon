@@ -60,6 +60,9 @@ initContainers:
       capabilities:
         drop: ["ALL"]
     command: ["sh", "-c", "cat /etc/ssl/certs/ca-certificates.crt /platform-ca/ca.crt > /ca-bundle/ca-bundle.crt"]
+    resources:
+      requests: { cpu: 10m, memory: 16Mi }
+      limits: { cpu: 100m, memory: 32Mi }
     volumeMounts:
       - name: platform-ca
         mountPath: /platform-ca

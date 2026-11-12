@@ -43,7 +43,7 @@ inv_addons:
       database: cividash
       username: cividash
       password: smoke-db-pass
-    # The app_secret template appends "/context/ngsi-ld" (the CORE path). The
+    # The app_secret template appends "/context/ngsi-ld/v1" (the CORE path). The
     # local bare Stellio broker serves "/ngsi-ld/v1" instead, so run-smoke.sh
     # overrides CIVITAS_API_URL for the actual sync test.
     civitas_api_url: "http://{{ civitas_gateway_ip }}:8090"

@@ -51,7 +51,7 @@ rows persisted into the in-cluster PostgreSQL.
 
 - `dev/smoke-vars.yml` stubs the CORE platform inventory (`inv_k8s`,
   `inv_op_stack`, `software`, `inv_addons.cividash`).
-- The app-secret appends the **CORE** NGSI-LD path `/context/ngsi-ld`; the local
+- The app-secret appends the **CORE** NGSI-LD path `/context/ngsi-ld/v1`; the local
   bare broker serves `/ngsi-ld/v1`, so `run-smoke.sh` overrides `CIVITAS_API_URL`
   for the sync test only.
 - `image_pull_policy: IfNotPresent` (smoke) keeps kind from trying to pull the
