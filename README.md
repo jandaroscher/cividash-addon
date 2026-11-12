@@ -143,7 +143,7 @@ documented in `CHANGELOG.md`.
 | Component | Version |
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.8.2 |
-| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.2) |
+| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.2); NGSI-LD sync within 1.8.x only from 1.8.2, see below |
 | CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.3`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |

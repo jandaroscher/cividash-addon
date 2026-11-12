@@ -72,6 +72,14 @@ initContainers:
 {{- end }}
 {{- end -}}
 
+{{- define "cividash.platformCa.podAnnotations" -}}
+{{- if .Values.platformCa }}
+annotations:
+  # The init container builds the bundle once per pod; roll pods on a CA change.
+  checksum/platform-ca: {{ .Values.platformCa | sha256sum }}
+{{- end }}
+{{- end -}}
+
 {{- define "cividash.platformCa.volumeMounts" -}}
 {{- if .Values.platformCa }}
 volumeMounts:

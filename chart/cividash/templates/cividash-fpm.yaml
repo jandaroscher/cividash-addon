@@ -17,6 +17,7 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      {{- include "cividash.platformCa.podAnnotations" . | nindent 6 }}
       labels:
         {{- include "cividash.labels" . | nindent 8 }}
         app.kubernetes.io/name: cividash-fpm
