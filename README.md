@@ -136,9 +136,8 @@ built by the CiviDash main repository — see [Helm chart, Images](docs/helm-cha
 
 The add-on's major and minor version (`chart/cividash/Chart.yaml`) follow the
 CORE minor version it targets: add-on `1.8.x` targets CORE `1.8.x` and also
-supports CORE `1.7.2` and later. The table below names the exact CORE release
-it is tested on. The patch digit is
-independent. Breaking changes to the inventory structure are
+supports CORE `1.7.2` up to the `1.8.x` line. The table below names the exact
+CORE release it is tested on. The patch digit is independent. Breaking changes to the inventory structure are
 documented in `CHANGELOG.md`.
 
 | Component | Version |
