@@ -32,6 +32,8 @@ spec:
         fsGroup: 82
         seccompProfile:
           type: RuntimeDefault
+      {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
+      {{- include "cividash.platformCa.volumes" . | nindent 6 }}
       containers:
         - name: fpm
           image: {{ include "cividash.appImage" . }}
@@ -72,6 +74,7 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
+          {{- include "cividash.platformCa.volumeMounts" . | nindent 10 }}
           resources:
             {{- toYaml .Values.resources.fpm | nindent 12 }}
 ---

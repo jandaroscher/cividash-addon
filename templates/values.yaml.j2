@@ -49,6 +49,10 @@ app:
     region: "{{ inv_addons.cividash.s3.region | default('us-east-1') }}"
     usePathStyle: {{ inv_addons.cividash.s3.use_path_style | default(true) | bool | lower }}
 
+# CORE's own private CA (inv_k8s.ingress.ca_path, empty for a public CA).
+{% set cividash_ca_path = (inv_k8s.ingress | default({})).ca_path | default('') %}
+platformCa: {{ (lookup('file', cividash_ca_path) if cividash_ca_path else '') | to_json }}
+
 db:
   host: "{{ cividash_db.host }}"
   port: {{ cividash_db.port }}

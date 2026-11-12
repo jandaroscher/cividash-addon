@@ -41,3 +41,54 @@ values.yaml and docs/helm-chart.md).
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Private platform CA (values.platformCa). PHP's curl and openssl get one bundle
+of the image's system CAs plus the platform CA, built by an init container,
+so outbound calls to Keycloak and APISIX trust a self-signed platform.
+*/}}
+{{- define "cividash.platformCa.initContainers" -}}
+{{- if .Values.platformCa }}
+initContainers:
+  - name: ca-bundle
+    image: {{ include "cividash.appImage" . }}
+    imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 82
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    command: ["sh", "-c", "cat /etc/ssl/certs/ca-certificates.crt /platform-ca/ca.crt > /ca-bundle/ca-bundle.crt"]
+    volumeMounts:
+      - name: platform-ca
+        mountPath: /platform-ca
+        readOnly: true
+      - name: ca-bundle
+        mountPath: /ca-bundle
+{{- end }}
+{{- end -}}
+
+{{- define "cividash.platformCa.volumeMounts" -}}
+{{- if .Values.platformCa }}
+volumeMounts:
+  - name: ca-bundle
+    mountPath: /ca-bundle
+    readOnly: true
+  - name: platform-ca
+    mountPath: /usr/local/etc/php/conf.d/zz-platform-ca.ini
+    subPath: platform-ca.ini
+    readOnly: true
+{{- end }}
+{{- end -}}
+
+{{- define "cividash.platformCa.volumes" -}}
+{{- if .Values.platformCa }}
+volumes:
+  - name: platform-ca
+    configMap:
+      name: cividash-platform-ca
+  - name: ca-bundle
+    emptyDir: {}
+{{- end }}
+{{- end -}}

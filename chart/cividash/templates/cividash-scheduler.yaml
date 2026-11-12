@@ -34,6 +34,8 @@ spec:
         fsGroup: 82
         seccompProfile:
           type: RuntimeDefault
+      {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
+      {{- include "cividash.platformCa.volumes" . | nindent 6 }}
       containers:
         - name: scheduler
           image: {{ include "cividash.appImage" . }}
@@ -52,5 +54,6 @@ spec:
                 name: cividash-oidc-secret
             - secretRef:
                 name: cividash-db-secret
+          {{- include "cividash.platformCa.volumeMounts" . | nindent 10 }}
           resources:
             {{- toYaml .Values.resources.scheduler | nindent 12 }}

@@ -143,7 +143,7 @@ documented in `CHANGELOG.md`.
 | Component | Version |
 | --- | --- |
 | cividash add-on (this repo/chart) | 1.8.2 |
-| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.1) |
+| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.2) |
 | CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.1.3`, `linux/amd64` and `linux/arm64` |
 | Helm | >= 3.14 |
 | Kubernetes | >= 1.28 |
@@ -185,6 +185,19 @@ allowed"), because the CORE inventory schema (`InvAddons` in
 and `addons`. The platform playbook merges and uses the keys as intended;
 validate the inventory without the `cividash` block, or skip `cc_cli validate`
 for it.
+
+NGSI-LD sync needs CORE 1.8.2 or later within 1.8.x. CORE 1.8.0 and 1.8.1
+reject the add-on's machine token at the APISIX introspection of the Stellio
+routes (`invalid_client`); the CORE 1.8.2 playbook fixes these routes in place.
+
+A platform with a private CA (`inv_k8s.ingress.ca_path` set, as in CORE's local
+k3d setup) needs no extra step: the add-on passes that CA to the chart
+(`platformCa`), and the PHP pods trust it next to the system CAs when they call
+Keycloak and APISIX.
+
+Do not change the Deployments with `kubectl set image` or similar. Helm 4
+applies server-side and stops the next upgrade with a field conflict on the
+changed field; change images through the inventory instead.
 
 **Cutting a release:** tag this repo `v1.8.x` and publish a GitHub release for
 the tag. Publishing runs the `Release SBOM` workflow, which attaches the image

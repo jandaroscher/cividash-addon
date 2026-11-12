@@ -171,7 +171,7 @@ all:
             #   password: "<from your vaulted inventory>"  # REQUIRED
 
             # --- CIVITAS / NGSI-LD -----------------------------------------
-            # Base URL of the CORE context broker; the app appends /context/ngsi-ld.
+            # Base URL of the CORE API gateway; the add-on appends /context/ngsi-ld/v1.
             civitas_api_url: "https://api.{{ DOMAIN }}"
 
             # --- object storage (CORE RustFS / S3) for the public media disk -

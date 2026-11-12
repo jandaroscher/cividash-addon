@@ -38,7 +38,7 @@ dependsOn:
   open:
     - name: CIVITAS/CORE
       versionMin: "1.7.2"
-      versionMax: "1.8.1"
+      versionMax: "1.8.2"
 
 localisation:
   localisationReady: false
