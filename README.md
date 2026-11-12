@@ -234,10 +234,17 @@ GitHub is the working and release repository:
 <https://github.com/jandaroscher/cividash-addon>. Issues, pull
 requests, Renovate dependency updates and release tags live there. The
 application images are built from the main repository's releases and
-published to GitHub Container Registry at `ghcr.io/jandaroscher`. Watch both GitHub repositories for new releases and
+published to GitHub Container Registry at `ghcr.io/jandaroscher`. Each
+release's images are also copied unchanged (same digests) to the openCode
+registry `registry.opencode.de/regensburg_next/cividash`; to pull from there,
+set `images.{app,web}.registry` to `registry.opencode.de` and
+`repository` to `regensburg_next/cividash/cividash-app` or
+`regensburg_next/cividash/cividash-web`. Watch both GitHub repositories for new releases and
 security fixes. The openCode repository
 (<https://gitlab.opencode.de/regensburg_next/cividash-addon>) is a mirror;
 changes made there are not merged back.
+
+Maintainer and contact: Stadt Regensburg, code@regensburg.de.
 
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
