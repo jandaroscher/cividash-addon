@@ -115,5 +115,7 @@ plain copy is enough. For example, from S3 to the volume:
 3. Check that a few images load under `https://<public_host>/storage/...`.
 
 From the volume to S3, copy the other way (`rclone copy /data s3:<bucket>`)
-before deploying with `storage: s3`. The claim stays in place until you
-delete it.
+before deploying with `storage: s3`. Uploads that land on the volume between
+that copy and the end of the deploy are not in the bucket yet, so run the
+same copy once more after the deploy; `rclone copy` only transfers what is
+missing. The claim stays in place until you delete it.
