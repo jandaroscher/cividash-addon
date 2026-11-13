@@ -80,6 +80,23 @@ applies `fsGroup` depends on its `fsGroupPolicy`
 applies it) and, on NFS, on the server not squashing root. If it is not
 applied, make the volume root writable for gid 82.
 
+On an NFS export with `root_squash` (the NFS default), the kubelet's `chown`
+runs as root, the server maps it to `nobody`, and the volume root stays owned
+by `65534:65534`. The deploy, the hooks, the readiness probes and `/up` still
+succeed, but every upload fails. Fix it once on the NFS server, so that new
+volume directories inherit gid 82:
+
+```sh
+chown 65534:82 <export-dir>
+chmod 2775 <export-dir>
+```
+
+For a volume that already exists, run the same on its directory instead:
+`chgrp 82 <volume-dir> && chmod 2775 <volume-dir>`. To check, write a file
+from the fpm pod:
+`kubectl -n <ns> exec deploy/cividash-fpm -- php artisan tinker --execute="var_dump(Storage::disk('public')->put('write-test.txt', 'ok'));"`
+should print `bool(true)`.
+
 ### Backup
 
 With `storage: volume` the media are no longer covered by the bucket's
