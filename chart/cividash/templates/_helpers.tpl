@@ -80,9 +80,14 @@ annotations:
 {{- end }}
 {{- end -}}
 
-{{- define "cividash.platformCa.volumeMounts" -}}
-{{- if .Values.platformCa }}
+{{/*
+Pod volumes and container mounts: the platform CA (above) and, with
+storage.type=volume, the shared public-media volume.
+*/}}
+{{- define "cividash.volumeMounts" -}}
+{{- if or .Values.platformCa (eq .Values.storage.type "volume") }}
 volumeMounts:
+{{- if .Values.platformCa }}
   - name: ca-bundle
     mountPath: /ca-bundle
     readOnly: true
@@ -91,15 +96,40 @@ volumeMounts:
     subPath: platform-ca.ini
     readOnly: true
 {{- end }}
+{{- include "cividash.storage.volumeMount" . }}
+{{- end }}
 {{- end -}}
 
-{{- define "cividash.platformCa.volumes" -}}
-{{- if .Values.platformCa }}
+{{- define "cividash.volumes" -}}
+{{- if or .Values.platformCa (eq .Values.storage.type "volume") }}
 volumes:
+{{- if .Values.platformCa }}
   - name: platform-ca
     configMap:
       name: cividash-platform-ca
   - name: ca-bundle
     emptyDir: {}
+{{- end }}
+{{- include "cividash.storage.volume" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Public media on a volume (storage.type=volume): the app's local "public"
+disk writes to storage/app/public, and the web image's public/storage
+symlink points there, so nginx serves the files without PHP.
+*/}}
+{{- define "cividash.storage.volumeMount" -}}
+{{- if eq .Values.storage.type "volume" }}
+  - name: public-media
+    mountPath: /var/www/html/storage/app/public
+{{- end }}
+{{- end -}}
+
+{{- define "cividash.storage.volume" -}}
+{{- if eq .Values.storage.type "volume" }}
+  - name: public-media
+    persistentVolumeClaim:
+      claimName: cividash-public-media
 {{- end }}
 {{- end -}}

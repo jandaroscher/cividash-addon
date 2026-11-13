@@ -32,6 +32,8 @@ inv_addons:
     db:
       host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED
       # password: "..."  # REQUIRED, supply via vaulted inventory
+    # Media on S3 (default). For a volume instead of S3, set
+    # storage: "volume" and drop the s3 block, see docs/storage.md.
     s3:
       endpoint: "https://s3.{{ DOMAIN }}"
       bucket: "cividash"
@@ -74,9 +76,11 @@ are absent or commented out there fall back to `default()` values in
 | `db.port` / `db.database` / `db.username` | `5432` / `cividash` / `cividash` | Optional overrides |
 | `db.password` | — | **Required** unless `db.central`, vaulted |
 | `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
+| `storage` | `s3` | Where uploaded media live: `s3` (bucket) or `volume` (PersistentVolumeClaim on `inv_k8s.storage_class.rwx`) — see [Media storage](docs/storage.md) |
+| `volume.size` / `volume.access_mode` | `5Gi` / `ReadWriteMany` | Claim size and access mode with `storage: volume` |
 | `s3.{endpoint,bucket,region}` | see `default_inventory.yml` | S3 media storage. Use a bucket for CiviDash media only; it can stay private |
 | `s3.public_url` | `""` | Empty: media is served by the dashboard under `/storage`. A bucket URL makes browsers load media from the bucket directly, which needs anonymous read on it |
-| `s3.access_key_id` / `s3.secret_access_key` | — | **Required**, vaulted |
+| `s3.access_key_id` / `s3.secret_access_key` | — | **Required** with `storage: s3`, vaulted |
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
 | `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing — see [Helm chart, Routing](docs/helm-chart.md#routing) |
@@ -101,9 +105,9 @@ platform inventory. The deploy asserts their presence and fails fast otherwise:
 - `inv_addons.cividash.db.password` — PostgreSQL password, rendered into
   `cividash-db-secret` as `DB_PASSWORD`. Not needed with `db.central: true`.
 - `inv_addons.cividash.s3.access_key_id` — S3 access key, rendered into
-  `cividash-app-secret` as `AWS_ACCESS_KEY_ID`.
+  `cividash-app-secret` as `AWS_ACCESS_KEY_ID`. Not needed with `storage: volume`.
 - `inv_addons.cividash.s3.secret_access_key` — S3 secret key, rendered into
-  `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`.
+  `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`. Not needed with `storage: volume`.
 
 ## What it deploys
 
@@ -128,7 +132,8 @@ PostgreSQL (see [Database](docs/database.md)).
 
 All PHP pods run with a hardened pod-security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`). Media is stored on S3 (`PUBLIC_DISK_DRIVER=s3`);
+`capabilities.drop: [ALL]`). Media is stored on S3 (`PUBLIC_DISK_DRIVER=s3`) or, with `storage: volume`,
+on the claim `cividash-public-media` (`PUBLIC_DISK_DRIVER=local`);
 sessions, cache and queue use the database; logs go to stderr. Images are
 built by the CiviDash main repository — see [Helm chart, Images](docs/helm-chart.md#images).
 
@@ -226,15 +231,16 @@ created:
   outside Helm's scope. Remove them via the APISIX Admin API.
 - **S3 media** (`PUBLIC_DISK_DRIVER=s3`) is untouched by uninstall; the
   bucket and its objects remain and must be cleaned up separately.
-- **PVCs:** none — media is on S3 and the database is external, so there is
-  nothing chart-owned to reclaim beyond the Secrets/Keycloak/APISIX objects
-  above.
+- **PVC** `cividash-public-media` (only with `storage: volume`) is kept by
+  Helm (`helm.sh/resource-policy: keep`) together with the media on it.
+  Delete it explicitly: `kubectl -n <ns> delete pvc cividash-public-media`.
 
 ## Documentation
 
 - [Helm chart](docs/helm-chart.md) — installation wrapper, values, routing, verifying the chart locally, images
 - [Authentication](docs/authentication.md) — admin auth, the NGSI-LD machine token, operator prerequisites
 - [Database](docs/database.md) — central CORE Postgres or external PostgreSQL
+- [Media storage](docs/storage.md) — S3 bucket or volume, access modes, backup, switching
 - [Initial config data](docs/seed.md) — the `cividash-seed` hook Job
 - [Troubleshooting](docs/troubleshooting.md)
 - [Components](docs/components.md) — what a deployment consists of, and the image SBOMs attached to each release

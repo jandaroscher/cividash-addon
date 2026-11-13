@@ -174,7 +174,21 @@ all:
             # Base URL of the CORE API gateway; the add-on appends /context/ngsi-ld/v1.
             civitas_api_url: "https://api.{{ DOMAIN }}"
 
-            # --- object storage (CORE RustFS / S3) for the public media disk -
+            # --- public media storage ---------------------------------------
+            # CORE ships no object storage. Two options:
+            # - "s3" (default): an S3-compatible bucket you provide (s3.* below).
+            # - "volume": a PersistentVolumeClaim on inv_k8s.storage_class.rwx,
+            #   shared by all CiviDash pods; nginx serves the files under
+            #   /storage. Needs a ReadWriteMany-capable class on more than one
+            #   node. Back it up with Velero file-system backup.
+            storage: "s3"
+            # volume:
+            #   size: "5Gi"
+            #   # ReadWriteOnce only on a single node or with a node-local class
+            #   # such as local-path, where all pods land on the volume's node.
+            #   access_mode: "ReadWriteMany"
+
+            # S3 bucket, only for storage: "s3".
             s3:
               endpoint: "https://s3.{{ DOMAIN }}"
               bucket: "cividash"

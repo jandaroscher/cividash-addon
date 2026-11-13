@@ -33,6 +33,10 @@ spec:
         runAsGroup: 101
         seccompProfile:
           type: RuntimeDefault
+      {{- if eq .Values.storage.type "volume" }}
+      volumes:
+        {{- include "cividash.storage.volume" . | nindent 6 }}
+      {{- end }}
       containers:
         - name: web
           image: {{ include "cividash.webImage" . }}
@@ -66,6 +70,13 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
+          {{- if eq .Values.storage.type "volume" }}
+          # nginx serves /storage straight from the shared volume.
+          volumeMounts:
+            - name: public-media
+              mountPath: /var/www/html/storage/app/public
+              readOnly: true
+          {{- end }}
           resources:
             {{- toYaml .Values.resources.web | nindent 12 }}
 ---

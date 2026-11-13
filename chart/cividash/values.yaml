@@ -52,6 +52,7 @@ app:
   logChannel: stderr
   sessionSecureCookie: true
   civitasApiUrl: ""
+  # Object storage for public media, used only with storage.type=s3.
   s3:
     accessKeyId: ""
     secretAccessKey: ""
@@ -61,6 +62,21 @@ app:
     region: us-east-1
     # Path-style URLs (endpoint/bucket/key), which self-hosted S3 such as MinIO expects.
     usePathStyle: true
+
+# Where uploaded public media (logos, tile images, page images) are stored.
+storage:
+  # "s3" (default): an S3-compatible bucket, configured under app.s3.
+  # "volume": a PersistentVolumeClaim mounted into every PHP pod and into
+  # cividash-web, which serves the files under /storage.
+  type: s3
+  volume:
+    # Leave empty for the cluster's default StorageClass. With more than one
+    # node, use a class that supports ReadWriteMany (CORE:
+    # inv_k8s.storage_class.rwx), since fpm, queue, scheduler and web pods
+    # share the volume.
+    storageClassName: ""
+    accessMode: ReadWriteMany
+    size: 5Gi
 
 # PEM of a private CA that signs the platform's TLS certificates (Keycloak,
 # APISIX). Empty: the image's system CAs only. The Ansible role fills it from

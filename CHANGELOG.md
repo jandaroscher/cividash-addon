@@ -5,6 +5,15 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- `inv_addons.cividash.storage: volume` stores uploaded media on a
+  PersistentVolumeClaim (`cividash-public-media`, StorageClass from
+  `inv_k8s.storage_class.rwx`) instead of S3, for platforms without object
+  storage. S3 stays the default and its keys are only required with
+  `storage: s3`. With CORE's Velero enabled, the namespace gets the same
+  backup schedule as CORE's components. See `docs/storage.md`.
+
 ### Fixed
 
 - `CIVITAS_API_URL` now ends in `/context/ngsi-ld/v1`. CORE rewrites
@@ -17,6 +26,7 @@ All notable changes to this add-on are documented here. Format follows
 
 ### Changed
 
+- The example inventory no longer claims CORE provides S3 storage; it does not.
 - Tested on CORE 1.8.2; NGSI-LD sync needs CORE 1.8.2 or later within 1.8.x.
 
 ## [1.8.2] - 2026-11-11

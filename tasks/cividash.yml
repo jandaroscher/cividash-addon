@@ -60,17 +60,18 @@
       - inv_addons.cividash.db is defined
       - (inv_addons.cividash.db.central | default(false) | bool) or (inv_addons.cividash.db.host | default('') | length > 0)
       - (inv_addons.cividash.db.central | default(false) | bool) or (inv_addons.cividash.db.password | default('') | length > 0)
-      # S3 credentials (vaulted): rendered into cividash-app-secret as AWS_*.
-      - inv_addons.cividash.s3.access_key_id is defined
-      - inv_addons.cividash.s3.access_key_id | length > 0
-      - inv_addons.cividash.s3.secret_access_key is defined
-      - inv_addons.cividash.s3.secret_access_key | length > 0
+      # Media storage: "s3" (default) or "volume" (PVC on inv_k8s.storage_class.rwx).
+      - (inv_addons.cividash.storage | default('s3')) in ['s3', 'volume']
+      # S3 credentials (vaulted), only for storage: s3. Rendered into
+      # cividash-app-secret as AWS_*.
+      - (inv_addons.cividash.storage | default('s3')) != 's3' or (inv_addons.cividash.s3.access_key_id | default('') | length > 0)
+      - (inv_addons.cividash.storage | default('s3')) != 's3' or (inv_addons.cividash.s3.secret_access_key | default('') | length > 0)
     fail_msg: >-
       Missing required keys in inv_addons.cividash.
       Expected: oidc_client_id, either db.central: true or the vaulted
       external-Postgres db.{host,password} (db.{database,username,port}
-      default in tasks/database.yml), and the
-      vaulted s3.{access_key_id,secret_access_key}.
+      default in tasks/database.yml), storage set to "s3" or "volume", and
+      with storage: s3 the vaulted s3.{access_key_id,secret_access_key}.
     success_msg: "CiviDash: required inventory keys present."
   tags: ["addons", "addon_cividash"]
 
@@ -194,4 +195,24 @@
     apply:
       tags: ["addons", "addon_cividash"]
   when: inv_addons.cividash.register_apisix_route | default(true) | bool
+  tags: ["addons", "addon_cividash"]
+
+# -----------------------------------------------------------------------------
+# Velero: with storage: volume the uploaded media live on the
+# cividash-public-media PVC, so back the namespace up like CORE's own
+# components (file-system backup, skipped unless inv_op_stack.velero.enable).
+# The schedule template exists from CORE 1.8.0; on older CORE, schedule the
+# backup yourself (see docs/storage.md).
+# -----------------------------------------------------------------------------
+- name: "CiviDash: Velero backup schedule for the public-media volume"
+  ansible.builtin.include_tasks:
+    file: tasks/templates/velero-schedule.yml
+    apply:
+      tags: ["addons", "addon_cividash"]
+  vars:
+    backup_namespace: "{{ k8s_namespace }}"
+  when:
+    - (inv_addons.cividash.storage | default('s3')) == 'volume'
+    - inv_op_stack.velero.enable | default(false) | bool
+    - (playbook_dir ~ '/tasks/templates/velero-schedule.yml') is file
   tags: ["addons", "addon_cividash"]
