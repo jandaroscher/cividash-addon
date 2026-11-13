@@ -239,6 +239,8 @@ security fixes. The openCode repository
 (<https://gitlab.opencode.de/regensburg_next/cividash-addon>) is a mirror;
 changes made there are not merged back.
 
+Maintainer and contact: Stadt Regensburg, code@regensburg.de.
+
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Code of conduct](CODE_OF_CONDUCT.md)
