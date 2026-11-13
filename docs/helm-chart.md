@@ -35,7 +35,8 @@ Chart values are rendered by [`templates/values.yaml.j2`](../templates/values.ya
 from `inv_addons.cividash.*` + `software.addon_cividash.*` (image defaults,
 honouring the private-registry override) + `inv_addons.cividash.images.*`
 (optional image overrides, see [Images](#images)) + `inv_k8s.ingress_class` /
-`inv_k8s.cert_manager.issuer_name`. Override any chart value directly (values
+`inv_k8s.cert_manager.issuer_name` + `inv_k8s.storage_class.rwx` (media volume,
+see [Media storage](storage.md)). Override any chart value directly (values
 the inventory has no dedicated key for yet, e.g. per-workload `resources.*`)
 via `inv_addons.cividash.helm_values` — it is combined (recursive) on top
 of the rendered values (see [`default_inventory.yml`](../default_inventory.yml)).

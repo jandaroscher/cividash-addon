@@ -14,6 +14,7 @@ SPDX-License-Identifier: EUPL-1.2+
     - inv_addons.cividash.images.{app,web}.* (optional image overrides)
     - inv_op_stack.private_registry.registry_full_url (private-registry override)
     - inv_k8s.ingress_class / inv_k8s.cert_manager.issuer_name
+    - inv_k8s.storage_class.rwx (public-media volume with storage: volume)
 #}
 {% set img_app = (inv_addons.cividash.images | default({})).app | default({}) %}
 {% set img_web = (inv_addons.cividash.images | default({})).web | default({}) %}
@@ -40,14 +41,23 @@ app:
   logChannel: "{{ inv_addons.cividash.log_channel | default('stderr') }}"
   sessionSecureCookie: {{ inv_addons.cividash.session_secure_cookie | default(true) | bool | lower }}
   civitasApiUrl: "{{ inv_addons.cividash.civitas_api_url | default('') }}"
+{% set cividash_s3 = inv_addons.cividash.s3 | default({}) %}
   s3:
-    accessKeyId: {{ (inv_addons.cividash.s3.access_key_id) | to_json }}
-    secretAccessKey: {{ (inv_addons.cividash.s3.secret_access_key) | to_json }}
-    endpoint: {{ (inv_addons.cividash.s3.endpoint) | to_json }}
-    bucket: {{ (inv_addons.cividash.s3.bucket) | to_json }}
-    publicUrl: {{ (inv_addons.cividash.s3.public_url) | to_json }}
-    region: "{{ inv_addons.cividash.s3.region | default('us-east-1') }}"
-    usePathStyle: {{ inv_addons.cividash.s3.use_path_style | default(true) | bool | lower }}
+    accessKeyId: {{ cividash_s3.access_key_id | default('') | to_json }}
+    secretAccessKey: {{ cividash_s3.secret_access_key | default('') | to_json }}
+    endpoint: {{ cividash_s3.endpoint | default('') | to_json }}
+    bucket: {{ cividash_s3.bucket | default('') | to_json }}
+    publicUrl: {{ cividash_s3.public_url | default('') | to_json }}
+    region: "{{ cividash_s3.region | default('us-east-1') }}"
+    usePathStyle: {{ cividash_s3.use_path_style | default(true) | bool | lower }}
+
+{% set cividash_volume = inv_addons.cividash.volume | default({}) %}
+storage:
+  type: "{{ inv_addons.cividash.storage | default('s3') }}"
+  volume:
+    storageClassName: "{{ (inv_k8s.storage_class | default({})).rwx | default('') }}"
+    accessMode: "{{ cividash_volume.access_mode | default('ReadWriteMany') }}"
+    size: "{{ cividash_volume.size | default('5Gi') }}"
 
 # CORE's own private CA (inv_k8s.ingress.ca_path, empty for a public CA).
 {% set cividash_ca_path = (inv_k8s.ingress | default({})).ca_path | default('') %}
