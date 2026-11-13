@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+{{- if .Values.platformCa }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cividash-platform-ca
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+data:
+  ca.crt: |
+    {{- .Values.platformCa | nindent 4 }}
+  platform-ca.ini: |
+    curl.cainfo = /ca-bundle/ca-bundle.crt
+    openssl.cafile = /ca-bundle/ca-bundle.crt
+{{- end }}

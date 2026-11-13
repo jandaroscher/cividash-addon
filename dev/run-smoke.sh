@@ -110,7 +110,7 @@ echo "$SEED_CHECK" | grep -q "tenant=default domain=dashboard.smoke.local" || {
 }
 
 # The migrate Job seeds IntegrationSettings.api_url from CIVITAS_API_URL, which
-# the add-on sets to the CORE path /context/ngsi-ld. NgsiLdClient prefers the
+# the add-on sets to the CORE path /context/ngsi-ld/v1. NgsiLdClient prefers the
 # DB-stored setting over config/env, so point that setting at the LOCAL bare
 # Stellio broker (which serves /ngsi-ld/v1) for the smoke.
 SYNC_URL="http://$GW:8090/ngsi-ld/v1"

@@ -29,6 +29,9 @@
       ingress_class: traefik
       cert_manager:
         issuer_name: letsencrypt
+      # A private platform CA, so CI also renders the platformCa path.
+      ingress:
+        ca_path: "{{ playbook_dir }}/test-ca.crt"
     inv_op_stack:
       private_registry: {}
     cividash_operator_inventory:

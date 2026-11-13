@@ -62,6 +62,11 @@ app:
     # Path-style URLs (endpoint/bucket/key), which self-hosted S3 such as MinIO expects.
     usePathStyle: true
 
+# PEM of a private CA that signs the platform's TLS certificates (Keycloak,
+# APISIX). Empty: the image's system CAs only. The Ansible role fills it from
+# CORE's inv_k8s.ingress.ca_path.
+platformCa: ""
+
 db:
   host: ""
   port: 5432
