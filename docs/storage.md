@@ -48,7 +48,8 @@ example NFS, CephFS or Longhorn RWX). With a class that only supports
 
 Set `volume.access_mode: "ReadWriteOnce"` only on a single node, or with a
 node-local class such as `local-path`, where every pod is scheduled on the
-volume's node. CORE's `inventory_loc_k3d.yml` sets all storage classes to
+volume's node. All of CiviDash then runs on that one node and stops if it
+fails. CORE's `inventory_loc_k3d.yml` sets all storage classes to
 `local-path`, which rejects `ReadWriteMany`, so local test clusters need
 `ReadWriteOnce`.
 
@@ -69,7 +70,8 @@ yourself.
 
 The claim carries `helm.sh/resource-policy: keep`, so `helm uninstall` leaves
 it and the media in place. Delete it explicitly to drop the media:
-`kubectl -n <ns> delete pvc cividash-public-media`.
+`kubectl -n <ns> delete pvc cividash-public-media`. With the usual reclaim policy
+`Delete`, deleting the claim also deletes the files.
 
 ## Switching between `s3` and `volume`
 
