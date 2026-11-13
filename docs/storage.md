@@ -74,9 +74,11 @@ can only grow (if the class allows expansion). A later change to
 makes the deploy fail with "spec is immutable". To change them, copy the
 media out, delete the claim and deploy again, then copy the media back.
 
-The PHP pods write as uid/gid 82 and set `fsGroup: 82`. If your storage
-driver ignores `fsGroup` (common with NFS), make the volume root writable for
-gid 82.
+The PHP pods write as uid/gid 82 and set `fsGroup: 82`. Whether a CSI driver
+applies `fsGroup` depends on its `fsGroupPolicy`
+(`kubectl get csidriver <name> -o jsonpath='{.spec.fsGroupPolicy}'`, `File`
+applies it) and, on NFS, on the server not squashing root. If it is not
+applied, make the volume root writable for gid 82.
 
 ### Backup
 
@@ -86,6 +88,12 @@ backup. When CORE's Velero is enabled (`inv_op_stack.velero.enable`, CORE
 namespace that CORE's own components use. It backs up the volume with Velero
 file-system backup. On older CORE, or without Velero, back up the volume
 yourself.
+
+To get the media back, restore only the volume, for example into a scratch
+namespace, and copy the files over:
+`velero restore create --from-backup <backup> --namespace-mappings <ns>:<scratch-ns> --include-resources persistentvolumeclaims,persistentvolumes,pods`.
+Restoring the whole namespace also brings back a second set of workloads and
+routes that point at the same database and host.
 
 ### Uninstall
 
