@@ -45,6 +45,9 @@ Every fpm, queue, scheduler and web pod mounts the same volume. On a cluster
 with more than one node the StorageClass must support `ReadWriteMany` (for
 example NFS, CephFS or Longhorn RWX). With a class that only supports
 `ReadWriteOnce`, pods scheduled on a second node stay in `ContainerCreating`.
+If the class does not support `ReadWriteMany` at all, the claim stays
+`Pending`, every pod waits for it and the Helm install times out. CORE's
+example value `standard` and the k3d value `local-path` are such classes.
 
 Set `volume.access_mode: "ReadWriteOnce"` only on a single node, or with a
 node-local class such as `local-path`, where every pod is scheduled on the
@@ -52,6 +55,24 @@ volume's node. All of CiviDash then runs on that one node and stops if it
 fails. CORE's `inventory_loc_k3d.yml` sets all storage classes to
 `local-path`, which rejects `ReadWriteMany`, so local test clusters need
 `ReadWriteOnce`.
+
+The class always comes from `inv_k8s.storage_class.rwx`. To use another class
+for CiviDash only, set it through `helm_values`:
+
+```yaml
+inv_addons:
+  cividash:
+    helm_values:
+      storage:
+        volume:
+          storageClassName: "my-rwx-class"
+```
+
+The claim's class and access mode cannot change once it exists, and its size
+can only grow (if the class allows expansion). A later change to
+`inv_k8s.storage_class.rwx`, `volume.access_mode` or a smaller `volume.size`
+makes the deploy fail with "spec is immutable". To change them, copy the
+media out, delete the claim and deploy again, then copy the media back.
 
 The PHP pods write as uid/gid 82 and set `fsGroup: 82`. If your storage
 driver ignores `fsGroup` (common with NFS), make the volume root writable for
@@ -72,6 +93,12 @@ The claim carries `helm.sh/resource-policy: keep`, so `helm uninstall` leaves
 it and the media in place. Delete it explicitly to drop the media:
 `kubectl -n <ns> delete pvc cividash-public-media`. With the usual reclaim policy
 `Delete`, deleting the claim also deletes the files.
+
+CORE's own uninstall (`--tags uninstall`) deletes the whole
+`<ENVIRONMENT>-cividash-stack` namespace, and the claim and the media with
+it, regardless of the `keep` annotation. Copy the media out first, or set the
+volume's reclaim policy to `Retain`
+(`kubectl patch pv <pv> -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'`).
 
 ## Switching between `s3` and `volume`
 

@@ -234,6 +234,8 @@ created:
 - **PVC** `cividash-public-media` (only with `storage: volume`) is kept by
   Helm (`helm.sh/resource-policy: keep`) together with the media on it.
   Delete it explicitly: `kubectl -n <ns> delete pvc cividash-public-media`.
+  CORE's own uninstall deletes the whole namespace and the media with it; see
+  [Media storage](docs/storage.md#uninstall).
 
 ## Documentation
 
