@@ -91,7 +91,7 @@ yourself.
 
 To get the media back, restore only the volume, for example into a scratch
 namespace, and copy the files over:
-`velero restore create --from-backup <backup> --namespace-mappings <ns>:<scratch-ns> --include-resources persistentvolumeclaims,persistentvolumes,pods`.
+`velero restore create --from-backup <backup> --namespace-mappings <ns>:<scratch-ns> --include-resources persistentvolumeclaims,persistentvolumes,pods,configmaps`.
 Restoring the whole namespace also brings back a second set of workloads and
 routes that point at the same database and host.
 
