@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       {{- if eq .Values.storage.type "volume" }}
       volumes:
-        {{- include "cividash.storage.volume" . | nindent 6 }}
+        {{- include "cividash.storage.volume" . | trimPrefix "\n" | nindent 6 }}
       {{- end }}
       containers:
         - name: web

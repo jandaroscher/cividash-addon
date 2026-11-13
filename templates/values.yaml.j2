@@ -55,7 +55,7 @@ app:
 storage:
   type: "{{ inv_addons.cividash.storage | default('s3') }}"
   volume:
-    storageClassName: "{{ inv_k8s.storage_class.rwx }}"
+    storageClassName: "{{ (inv_k8s.storage_class | default({})).rwx | default('') }}"
     accessMode: "{{ cividash_volume.access_mode | default('ReadWriteMany') }}"
     size: "{{ cividash_volume.size | default('5Gi') }}"
 

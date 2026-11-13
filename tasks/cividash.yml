@@ -210,7 +210,7 @@
     apply:
       tags: ["addons", "addon_cividash"]
   vars:
-    backup_namespace: "{{ k8s_namespace }}"
+    backup_namespace: "{{ inv_addons.cividash.ns_name }}"
   when:
     - (inv_addons.cividash.storage | default('s3')) == 'volume'
     - inv_op_stack.velero.enable | default(false) | bool

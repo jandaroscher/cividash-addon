@@ -16,7 +16,8 @@ add-on offers two places for that disk, chosen with
 | `s3` (default) | An S3-compatible bucket | Endpoint, bucket and vaulted credentials under `s3.*` |
 | `volume` | The PersistentVolumeClaim `cividash-public-media` | A StorageClass in `inv_k8s.storage_class.rwx` |
 
-In both cases browsers load media from the dashboard under `/storage`.
+In both cases browsers load media from the dashboard under `/storage`,
+unless `s3.public_url` points them at the bucket.
 
 ## `storage: volume`
 

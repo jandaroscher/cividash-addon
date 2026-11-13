@@ -31,6 +31,8 @@ spec:
         runAsUser: 82
         runAsGroup: 82
         fsGroup: 82
+        # Chown the media volume only when its root does not match yet.
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       {{- include "cividash.platformCa.initContainers" . | nindent 6 }}

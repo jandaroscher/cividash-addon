@@ -58,12 +58,17 @@ jobs:
         run: >-
           ansible-playbook dev/render-values.yml -e DOMAIN=example.org
           -e ENVIRONMENT=ci -e cividash_values_out="$RUNNER_TEMP/core-values.yaml"
+      - name: Render CORE Helm values for storage volume without S3
+        run: >-
+          ansible-playbook dev/render-values.yml -e DOMAIN=example.org
+          -e ENVIRONMENT=ci -e cividash_values_out="$RUNNER_TEMP/core-values-volume.yaml"
+          -e '{"cividash_operator_inventory": {"storage": "volume", "helm_values": {}}}'
       - name: Helm lint
         run: |
           helm lint --strict chart/cividash
           helm lint --strict chart/cividash -f chart/cividash/ci/smoke-values.yaml
           helm lint --strict chart/cividash -f "$RUNNER_TEMP/core-values.yaml"
-          helm lint --strict chart/cividash -f "$RUNNER_TEMP/core-values.yaml" --set storage.type=volume
+          helm lint --strict chart/cividash -f "$RUNNER_TEMP/core-values-volume.yaml"
       - name: Validate rendered manifests with kubeconform
         # Kubernetes 1.34 is the newest version CORE 1.8 is tested on
         # (CORE docs, Deployment Requirements: 1.31 to 1.34). HTTPRoute is a
@@ -75,7 +80,7 @@ jobs:
           CRD_SCHEMAS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/041baf4c1d3740ca21461cab765e7432ecd073ef
         run: |
           set -o pipefail
-          for args in "-f chart/cividash/values.yaml" "-f $RUNNER_TEMP/core-values.yaml" "-f $RUNNER_TEMP/core-values.yaml --set storage.type=volume"; do
+          for args in "-f chart/cividash/values.yaml" "-f $RUNNER_TEMP/core-values.yaml" "-f $RUNNER_TEMP/core-values-volume.yaml"; do
             echo "::group::$args"
             # shellcheck disable=SC2086 # $args holds several helm flags
             helm template cividash chart/cividash $args \
