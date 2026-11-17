@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+{{/*
+cividash-public-media — uploaded public media with storage.type=volume.
+"keep": `helm uninstall` leaves the claim and its files in place; delete it
+by hand to drop the media.
+*/}}
+{{- if eq .Values.storage.type "volume" }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cividash-public-media
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-public-media
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.storage.volume.accessMode }}
+  {{- with .Values.storage.volume.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.volume.size }}
+{{- end }}

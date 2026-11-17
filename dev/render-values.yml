@@ -27,6 +27,8 @@
       password: ci-db-password
     inv_k8s:
       ingress_class: traefik
+      storage_class:
+        rwx: nfs-rwx
       cert_manager:
         issuer_name: letsencrypt
       # A private platform CA, so CI also renders the platformCa path.

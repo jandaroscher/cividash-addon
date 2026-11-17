@@ -59,7 +59,7 @@ description:
       - Installation über den zentralen CIVITAS/CORE-Plattform-Helm-Task
       - Keycloak-SSO für den Admin-Bereich über einen eigenen Keycloak-Client
       - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
-      - Anbindung an eine externe PostgreSQL-Datenbank und S3-Medienspeicher
+      - Anbindung an eine externe PostgreSQL-Datenbank und Medienspeicher auf S3 oder einem Kubernetes-Volume
       - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
     documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"
   en:
@@ -74,6 +74,6 @@ description:
       - Installs through the central CIVITAS/CORE platform Helm task
       - Keycloak SSO for the admin area via a dedicated Keycloak client
       - NGSI-LD machine token via the shared api-access client
-      - Connects to an external PostgreSQL database and S3 media storage
+      - Connects to an external PostgreSQL database and stores media on S3 or a Kubernetes volume
       - Idempotent database migration and initial data seed as Helm hook Jobs
     documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"

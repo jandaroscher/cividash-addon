@@ -31,10 +31,12 @@ spec:
         runAsUser: 82
         runAsGroup: 82
         fsGroup: 82
+        # Chown the media volume only when its root does not match yet.
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
-      {{- include "cividash.platformCa.volumes" . | nindent 6 }}
+      {{- include "cividash.volumes" . | nindent 6 }}
       containers:
         - name: queue
           image: {{ include "cividash.appImage" . }}
@@ -61,6 +63,6 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
-          {{- include "cividash.platformCa.volumeMounts" . | nindent 10 }}
+          {{- include "cividash.volumeMounts" . | nindent 10 }}
           resources:
             {{- toYaml .Values.resources.queue | nindent 12 }}

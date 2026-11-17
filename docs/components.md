@@ -34,4 +34,4 @@ The add-on brings none of these; the CORE platform or its operator provides them
 - Keycloak (realm, shared `api-access` client, tenant groups)
 - APISIX (route to `cividash-web`) and the ingress controller (Traefik by default) or Gateway API
 - PostgreSQL operator with `central-db`, when `db.central: true`
-- S3-compatible object storage for media (bucket and credentials from the operator)
+- With `storage: s3` (default): S3-compatible object storage for media (bucket and credentials from the operator). With `storage: volume`: a StorageClass for the media volume, `ReadWriteMany` on more than one node
