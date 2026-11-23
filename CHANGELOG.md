@@ -5,6 +5,15 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-11-23
+
+### Security
+
+- Images pinned to CiviDash `1.2.1`, which runs PHP 8.2.36 (fixes
+  CVE-2026-126714 and the other issues of the 19 November 2026 PHP release)
+  and disables PHP session upload progress. CiviDash 1.2.1 also contains the
+  1.2.0 changes, including the migration of the stored NGSI-LD URL to `/v1`.
+
 ### Added
 
 - `inv_addons.cividash.storage: volume` stores uploaded media on a
@@ -177,7 +186,8 @@ First public release.
   `readOnlyRootFilesystem` is not set, see
   [docs/core-guideline-conformance.md](docs/core-guideline-conformance.md).
 
-[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.8.2...main
+[Unreleased]: https://github.com/jandaroscher/cividash-addon/compare/v1.8.3...main
+[1.8.3]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.3
 [1.8.2]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.2
 [1.8.1]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.1
 [1.8.0]: https://github.com/jandaroscher/cividash-addon/releases/tag/v1.8.0
