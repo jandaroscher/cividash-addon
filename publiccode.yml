@@ -13,8 +13,8 @@ applicationSuite: CiviDash
 url: "https://github.com/jandaroscher/cividash-addon"
 softwareType: addon
 
-softwareVersion: 1.8.2
-releaseDate: "2026-11-11"
+softwareVersion: 1.8.3
+releaseDate: "2026-11-23"
 
 platforms:
   - web
