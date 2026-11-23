@@ -37,6 +37,8 @@ All notable changes to this add-on are documented here. Format follows
 
 - The example inventory no longer claims CORE provides S3 storage; it does not.
 - Tested on CORE 1.8.2; NGSI-LD sync needs CORE 1.8.2 or later within 1.8.x.
+- `publiccode.yml` names the City of Regensburg (`code@regensburg.de`) as
+  contact, and the openCode project metadata is synced from it.
 
 ## [1.8.2] - 2026-11-11
 
