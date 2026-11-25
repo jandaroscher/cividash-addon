@@ -25,7 +25,9 @@ different working directory (e.g. the CORE repo root).
 playbook with `-v`/`-vvv` still prints the rendered chart values — including
 `db.password`, `s3.secretAccessKey`, `APP_KEY` — to the log. Do not run the
 Helm step with `-v` against shared/persisted logs until CORE adds
-`no_log: "{{ helm_no_log | default(false) }}"` to that wrapper task. The
+`no_log: "{{ helm_no_log | default(false) }}"` to that wrapper task. With
+`s3.existing_secret` the S3 keys are not part of the values at all (see
+[Media storage](storage.md#credentials-from-your-own-secret)). The
 vendored `dev/k8s-helm.yml` used by the local smoke already honours
 `helm_no_log`.
 

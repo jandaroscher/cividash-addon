@@ -5,6 +5,22 @@ All notable changes to this add-on are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- Every container now runs with `readOnlyRootFilesystem: true`, as the
+  CIVITAS/CORE 2 policies require. The paths the app and nginx write to
+  (`storage/`, `bootstrap/cache`, `/tmp`, nginx's `conf.d`) are pod-local
+  `emptyDir` volumes, filled from the image by init containers. No inventory
+  change is needed.
+- `inv_addons.cividash.s3.existing_secret` reads the S3 credentials from a
+  Secret you create (keys `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+  instead of the inventory and the Helm values. See `docs/storage.md`.
+- Optional NetworkPolicies (chart value `networkPolicy`, off by default).
+- `replicas.queue` (default 1), a liveness probe for the scheduler, and an
+  explicit zero-downtime rollout strategy for fpm, web and queue.
+- CI checks the rendered chart against the CIVITAS/CORE 2 base Kyverno
+  policies.
+
 ## [1.8.3] - 2026-11-23
 
 ### Security

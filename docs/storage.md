@@ -42,8 +42,8 @@ inv_addons:
 
 The PHP pods then read `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from
 that Secret, and `s3.access_key_id`/`s3.secret_access_key` are ignored. The
-Secret must exist before the deploy; the `cividash-migrate` Job waits for it
-otherwise. After rotating the keys in the Secret, restart the deployments
+Secret must exist before the deploy; otherwise the pods cannot start and the
+deploy fails at the Helm timeout. After rotating the keys in the Secret, restart the deployments
 (`kubectl rollout restart deployment -n <env>-cividash-stack`), because
 environment variables are read only at pod start. This is also the way
 CIVITAS/CORE 2 expects operator-supplied credentials.
