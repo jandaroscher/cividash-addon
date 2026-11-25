@@ -67,7 +67,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
+      {{- include "cividash.initContainers" . | nindent 6 }}
       {{- include "cividash.volumes" . | nindent 6 }}
       containers:
         - name: seed
@@ -99,6 +99,7 @@ spec:
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           envFrom:
@@ -108,6 +109,7 @@ spec:
                 name: cividash-oidc-secret
             - secretRef:
                 name: cividash-db-secret
+          {{- include "cividash.env" . | nindent 10 }}
           {{- include "cividash.volumeMounts" . | nindent 10 }}
           resources:
             {{- toYaml .Values.resources.seed | nindent 12 }}

@@ -86,6 +86,7 @@ all:
             replicas:
               web: 2
               fpm: 2
+              queue: 1
 
             # --- initial config data (cividash-seed Helm hook Job) --------------
             # Runs after migrate/workloads on every install/upgrade. Every
@@ -200,6 +201,11 @@ all:
               # serve media themselves and always need the bucket URL here.
               public_url: ""
               region: "us-east-1"
-              # access_key_id: ""   # REQUIRED, supply via vaulted inventory
-              # secret_access_key: ""  # REQUIRED, supply via vaulted inventory
+              # Credentials: either the name of a Secret you create in the add-on
+              # namespace with the keys AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+              # (keeps them out of the inventory and the Helm values) ...
+              # existing_secret: "cividash-s3"
+              # ... or both keys, vaulted:
+              # access_key_id: ""   # REQUIRED without existing_secret, supply via vaulted inventory
+              # secret_access_key: ""  # REQUIRED without existing_secret, supply via vaulted inventory
               # use_path_style: true   # AWS_USE_PATH_STYLE_ENDPOINT, needed for MinIO and most self-hosted S3

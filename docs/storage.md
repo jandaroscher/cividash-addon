@@ -19,6 +19,35 @@ add-on offers two places for that disk, chosen with
 In both cases browsers load media from the dashboard under `/storage`,
 unless `s3.public_url` points them at the bucket.
 
+## Credentials from your own Secret
+
+With `storage: s3`, the access keys can stay out of the inventory and the
+Helm values: create a Secret in the add-on namespace with exactly these two
+keys and name it in `s3.existing_secret`.
+
+```bash
+kubectl -n <env>-cividash-stack create secret generic cividash-s3 \
+  --from-literal=AWS_ACCESS_KEY_ID=<key> \
+  --from-literal=AWS_SECRET_ACCESS_KEY=<secret>
+```
+
+```yaml
+inv_addons:
+  cividash:
+    s3:
+      existing_secret: "cividash-s3"
+      endpoint: "https://s3.example.org"
+      bucket: "cividash"
+```
+
+The PHP pods then read `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from
+that Secret, and `s3.access_key_id`/`s3.secret_access_key` are ignored. The
+Secret must exist before the deploy; otherwise the pods cannot start and the
+deploy fails at the Helm timeout. After rotating the keys in the Secret, restart the deployments
+(`kubectl rollout restart deployment -n <env>-cividash-stack`), because
+environment variables are read only at pod start. This is also the way
+CIVITAS/CORE 2 expects operator-supplied credentials.
+
 ## `storage: volume`
 
 ```yaml

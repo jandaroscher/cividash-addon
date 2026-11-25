@@ -11,6 +11,13 @@ metadata:
     app.kubernetes.io/name: cividash-web
 spec:
   replicas: {{ .Values.replicas.web }}
+  # Explicit zero-downtime rollout (what the defaults already do for these
+  # replica counts), required by the CIVITAS/CORE 2 production policies.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: cividash-web
@@ -33,10 +40,35 @@ spec:
         runAsGroup: 101
         seccompProfile:
           type: RuntimeDefault
-      {{- if eq .Values.storage.type "volume" }}
+      # Read-only root filesystem: nginx writes its pid and temp files to /tmp,
+      # and the image's 05-resolver.sh fills the resolver and FPM upstream into
+      # conf.d/default.conf at start. conf.d is therefore an emptyDir, seeded
+      # with the image's own default.conf by the init container.
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-conf
+          emptyDir: {}
+        {{- if eq .Values.storage.type "volume" }}
         {{- include "cividash.storage.volume" . | trimPrefix "\n" | nindent 6 }}
-      {{- end }}
+        {{- end }}
+      initContainers:
+        - name: nginx-conf
+          image: {{ include "cividash.webImage" . }}
+          imagePullPolicy: {{ .Values.images.web.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          command: ["cp", "-R", "/etc/nginx/conf.d/.", "/nginx-conf/"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /nginx-conf
       containers:
         - name: web
           image: {{ include "cividash.webImage" . }}
@@ -44,6 +76,7 @@ spec:
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           ports:
@@ -70,9 +103,13 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
-          {{- if eq .Values.storage.type "volume" }}
-          # nginx serves /storage straight from the shared volume.
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+          {{- if eq .Values.storage.type "volume" }}
+            # nginx serves /storage straight from the shared volume.
             - name: public-media
               mountPath: /var/www/html/storage/app/public
               readOnly: true

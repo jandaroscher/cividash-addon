@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+{{- if .Values.networkPolicy.enabled }}
+{{- if not .Values.networkPolicy.webFrom }}
+{{- fail "networkPolicy.enabled requires networkPolicy.webFrom, otherwise nothing can reach cividash-web" }}
+{{- end }}
+# Policies add up: this one denies all ingress to every pod of the release,
+# the two below open exactly the web and FastCGI paths.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cividash-default-deny
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: cividash
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cividash-web
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-web
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        {{- toYaml .Values.networkPolicy.webFrom | nindent 8 }}
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cividash-fpm
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-fpm
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cividash-web
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 9000
+          protocol: TCP
+{{- end }}
