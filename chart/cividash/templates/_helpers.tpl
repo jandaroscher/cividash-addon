@@ -43,13 +43,15 @@ values.yaml and docs/helm-chart.md).
 {{- end -}}
 
 {{/*
-Private platform CA (values.platformCa). PHP's curl and openssl get one bundle
-of the image's system CAs plus the platform CA, built by an init container,
-so outbound calls to Keycloak and APISIX trust a self-signed platform.
+Init containers of the PHP pods: writable-dirs (below) and, with a private
+platform CA (values.platformCa), ca-bundle. PHP's curl and openssl get one
+bundle of the image's system CAs plus the platform CA, so outbound calls to
+Keycloak and APISIX trust a self-signed platform.
 */}}
-{{- define "cividash.platformCa.initContainers" -}}
-{{- if .Values.platformCa }}
+{{- define "cividash.initContainers" -}}
 initContainers:
+{{- include "cividash.writable.initContainer" . }}
+{{- if .Values.platformCa }}
   - name: ca-bundle
     image: {{ include "cividash.appImage" . }}
     imagePullPolicy: {{ .Values.images.app.pullPolicy }}
@@ -57,6 +59,7 @@ initContainers:
       runAsNonRoot: true
       runAsUser: 82
       allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
       capabilities:
         drop: ["ALL"]
     command: ["sh", "-c", "cat /etc/ssl/certs/ca-certificates.crt /platform-ca/ca.crt > /ca-bundle/ca-bundle.crt"]
@@ -81,12 +84,13 @@ annotations:
 {{- end -}}
 
 {{/*
-Pod volumes and container mounts: the platform CA (above) and, with
-storage.type=volume, the shared public-media volume.
+Pod volumes and container mounts of the PHP pods: the writable paths (below),
+the platform CA (above) and, with storage.type=volume, the shared public-media
+volume.
 */}}
 {{- define "cividash.volumeMounts" -}}
-{{- if or .Values.platformCa (eq .Values.storage.type "volume") }}
 volumeMounts:
+{{- include "cividash.writable.volumeMounts" . }}
 {{- if .Values.platformCa }}
   - name: ca-bundle
     mountPath: /ca-bundle
@@ -97,12 +101,11 @@ volumeMounts:
     readOnly: true
 {{- end }}
 {{- include "cividash.storage.volumeMount" . }}
-{{- end }}
 {{- end -}}
 
 {{- define "cividash.volumes" -}}
-{{- if or .Values.platformCa (eq .Values.storage.type "volume") }}
 volumes:
+{{- include "cividash.writable.volumes" . }}
 {{- if .Values.platformCa }}
   - name: platform-ca
     configMap:
@@ -111,6 +114,79 @@ volumes:
     emptyDir: {}
 {{- end }}
 {{- include "cividash.storage.volume" . }}
+{{- end -}}
+
+{{/*
+The PHP containers run with a read-only root filesystem. Laravel writes its
+caches (config, routes, views, Filament components; warmed by the image's
+entrypoint at every start), sessions and uploads under storage/ and
+bootstrap/cache, PHP its temp files to /tmp: each gets a pod-local emptyDir,
+which is what the container's own filesystem was before. Laravel refuses to
+boot without the storage/framework directories, so the writable-dirs init
+container first copies the image's storage/ and bootstrap/cache/ into them.
+*/}}
+{{- define "cividash.writable.initContainer" }}
+  - name: writable-dirs
+    image: {{ include "cividash.appImage" . }}
+    imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 82
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    command: ["sh", "-c", "cp -R /var/www/html/storage/. /writable/storage/ && cp -R /var/www/html/bootstrap/cache/. /writable/bootstrap-cache/"]
+    resources:
+      requests: { cpu: 10m, memory: 16Mi }
+      limits: { cpu: 100m, memory: 32Mi }
+    volumeMounts:
+      - name: storage
+        mountPath: /writable/storage
+      - name: bootstrap-cache
+        mountPath: /writable/bootstrap-cache
+{{- end -}}
+
+{{- define "cividash.writable.volumeMounts" }}
+  - name: tmp
+    mountPath: /tmp
+  - name: storage
+    mountPath: /var/www/html/storage
+  - name: bootstrap-cache
+    mountPath: /var/www/html/bootstrap/cache
+{{- end -}}
+
+{{- define "cividash.writable.volumes" }}
+  - name: tmp
+    emptyDir: {}
+  - name: storage
+    emptyDir: {}
+  - name: bootstrap-cache
+    emptyDir: {}
+{{- end -}}
+
+{{/*
+Environment of the PHP containers besides the envFrom Secrets. HOME points at
+the writable /tmp, because the image's home directory is on the read-only root
+and artisan tinker (used by cividash-seed) fails if it cannot write its config
+there. With app.s3.existingSecret, the S3 credentials come from that
+operator-created Secret instead of values rendered into cividash-app-secret.
+*/}}
+{{- define "cividash.env" -}}
+env:
+  - name: HOME
+    value: /tmp
+{{- if and (eq .Values.storage.type "s3") .Values.app.s3.existingSecret }}
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.app.s3.existingSecret }}
+        key: AWS_ACCESS_KEY_ID
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.app.s3.existingSecret }}
+        key: AWS_SECRET_ACCESS_KEY
 {{- end }}
 {{- end -}}
 

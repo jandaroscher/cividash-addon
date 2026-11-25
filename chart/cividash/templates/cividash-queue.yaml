@@ -10,7 +10,14 @@ metadata:
     {{- include "cividash.labels" . | nindent 4 }}
     app.kubernetes.io/name: cividash-queue
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas.queue }}
+  # Explicit zero-downtime rollout (what the defaults already do for these
+  # replica counts), required by the CIVITAS/CORE 2 production policies.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: cividash-queue
@@ -35,7 +42,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
+      {{- include "cividash.initContainers" . | nindent 6 }}
       {{- include "cividash.volumes" . | nindent 6 }}
       containers:
         - name: queue
@@ -45,6 +52,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 82
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           command: ["php"]
@@ -56,6 +64,7 @@ spec:
                 name: cividash-oidc-secret
             - secretRef:
                 name: cividash-db-secret
+          {{- include "cividash.env" . | nindent 10 }}
           livenessProbe:
             exec:
               command: ["sh", "-c", "pgrep -f \"artisan queue:work\" > /dev/null"]

@@ -31,6 +31,9 @@ images:
 replicas:
   fpm: 2
   web: 2
+  # Queue workers share the database queue, so more than one is safe. The
+  # scheduler always runs exactly once (Recreate strategy, no setting).
+  queue: 1
 
 app:
   # Public host the app is served on (also used for the Ingress/HTTPRoute
@@ -54,6 +57,10 @@ app:
   civitasApiUrl: ""
   # Object storage for public media, used only with storage.type=s3.
   s3:
+    # Name of a Secret the operator creates in the release namespace, with the
+    # keys AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY. When set, the two values
+    # below are ignored and the credentials never appear in Helm values.
+    existingSecret: ""
     accessKeyId: ""
     secretAccessKey: ""
     endpoint: ""
@@ -116,6 +123,20 @@ gatewayApi:
   parentRefs: []
   # - name: my-gateway
   #   namespace: gateway-system
+
+# Optional NetworkPolicies (off by default): deny all ingress to the chart's
+# pods except cividash-web on 8080 from the peers listed in webFrom (the
+# ingress controller, APISIX or a Gateway), and cividash-fpm on 9000 from
+# cividash-web. Egress is not restricted.
+networkPolicy:
+  enabled: false
+  webFrom: []
+  # - namespaceSelector:
+  #     matchLabels:
+  #       kubernetes.io/metadata.name: kube-system
+  #   podSelector:
+  #     matchLabels:
+  #       app.kubernetes.io/name: traefik
 
 # Initial config data, seeded by the cividash-seed Helm hook Job (post-install,
 # post-upgrade) after migrate/workloads. Every step is idempotent, see

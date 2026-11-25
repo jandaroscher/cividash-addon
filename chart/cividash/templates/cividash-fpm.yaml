@@ -11,6 +11,13 @@ metadata:
     app.kubernetes.io/name: cividash-fpm
 spec:
   replicas: {{ .Values.replicas.fpm }}
+  # Explicit zero-downtime rollout (what the defaults already do for these
+  # replica counts), required by the CIVITAS/CORE 2 production policies.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: cividash-fpm
@@ -35,7 +42,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      {{- include "cividash.platformCa.initContainers" . | nindent 6 }}
+      {{- include "cividash.initContainers" . | nindent 6 }}
       {{- include "cividash.volumes" . | nindent 6 }}
       containers:
         - name: fpm
@@ -45,6 +52,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 82
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           ports:
@@ -57,6 +65,7 @@ spec:
                 name: cividash-oidc-secret
             - secretRef:
                 name: cividash-db-secret
+          {{- include "cividash.env" . | nindent 10 }}
           # Keep serving while the endpoint removal reaches kube-proxy and the
           # gateway; without it, rollouts briefly answer 502/504.
           lifecycle:

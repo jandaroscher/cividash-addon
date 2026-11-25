@@ -68,7 +68,7 @@ are absent or commented out there fall back to `default()` values in
 | `ngsi_ld_scope` | `api:read api:write` | OAuth scope requested for the NGSI-LD machine token — see [Authentication](docs/authentication.md) |
 | `m2m_preflight_enabled` | `true` | Deploy-time check that the M2M token works — see [Authentication](docs/authentication.md) |
 | `keycloak_base_url_internal` | in-cluster Keycloak service | Override if the SSO token exchange needs a different internal endpoint — see [Troubleshooting](docs/troubleshooting.md) |
-| `replicas.{web,fpm}` | `2` / `2` | Deployment replica counts |
+| `replicas.{web,fpm,queue}` | `2` / `2` / `1` | Deployment replica counts (the scheduler always runs once) |
 | `log_level` / `log_channel` | `info` / `stderr` | Production hardening, override only to loosen for debugging |
 | `session_secure_cookie` | `true` | Production hardening |
 | `db.central` | `false` | `true`: create the database and its role in the central CORE Postgres (`central-db`) and read the credentials from there; `db.host`/`db.password` are then not needed — see [Database](docs/database.md) |
@@ -80,7 +80,8 @@ are absent or commented out there fall back to `default()` values in
 | `volume.size` / `volume.access_mode` | `5Gi` / `ReadWriteMany` | Claim size and access mode with `storage: volume` |
 | `s3.{endpoint,bucket,region}` | see `default_inventory.yml` | S3 media storage. Use a bucket for CiviDash media only; it can stay private |
 | `s3.public_url` | `""` | Empty: media is served by the dashboard under `/storage`. A bucket URL makes browsers load media from the bucket directly, which needs anonymous read on it |
-| `s3.access_key_id` / `s3.secret_access_key` | — | **Required** with `storage: s3`, vaulted |
+| `s3.existing_secret` | `""` | Name of a Secret you create in the add-on namespace with the keys `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`; replaces the two keys below — see [Media storage](docs/storage.md#credentials-from-your-own-secret) |
+| `s3.access_key_id` / `s3.secret_access_key` | — | **Required** with `storage: s3` unless `s3.existing_secret` is set, vaulted |
 | `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
 | `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
 | `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing — see [Helm chart, Routing](docs/helm-chart.md#routing) |
@@ -105,9 +106,11 @@ platform inventory. The deploy asserts their presence and fails fast otherwise:
 - `inv_addons.cividash.db.password` — PostgreSQL password, rendered into
   `cividash-db-secret` as `DB_PASSWORD`. Not needed with `db.central: true`.
 - `inv_addons.cividash.s3.access_key_id` — S3 access key, rendered into
-  `cividash-app-secret` as `AWS_ACCESS_KEY_ID`. Not needed with `storage: volume`.
+  `cividash-app-secret` as `AWS_ACCESS_KEY_ID`. Not needed with `storage: volume`
+  or `s3.existing_secret`.
 - `inv_addons.cividash.s3.secret_access_key` — S3 secret key, rendered into
-  `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`. Not needed with `storage: volume`.
+  `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`. Not needed with `storage: volume`
+  or `s3.existing_secret`.
 
 ## What it deploys
 
@@ -130,9 +133,13 @@ PostgreSQL (see [Database](docs/database.md)).
 | `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress` (class `traefik` by default), `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
 | APISIX upstream + route | APISIX Admin API | when `register_apisix_route`; open route `public_host` `/*` -> `cividash-web` (see [Authentication](docs/authentication.md)) |
 
-All PHP pods run with a hardened pod-security context (`runAsNonRoot`,
+All pods run with a hardened security context (`runAsNonRoot`,
 `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`). Media is stored on S3 (`PUBLIC_DISK_DRIVER=s3`) or, with `storage: volume`,
+`capabilities.drop: [ALL]`, `readOnlyRootFilesystem: true`; the paths the
+app and nginx write to are pod-local `emptyDir` volumes). Optional
+NetworkPolicies (chart value `networkPolicy`, off by default, set it through
+`helm_values`) let only the listed sources reach `cividash-web` and only
+`cividash-web` reach `cividash-fpm`. Media is stored on S3 (`PUBLIC_DISK_DRIVER=s3`) or, with `storage: volume`,
 on the claim `cividash-public-media` (`PUBLIC_DISK_DRIVER=local`);
 sessions, cache and queue use the database; logs go to stderr. Images are
 built by the CiviDash main repository — see [Helm chart, Images](docs/helm-chart.md#images).

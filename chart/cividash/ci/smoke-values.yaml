@@ -10,6 +10,7 @@ images:
 replicas:
   fpm: 1
   web: 1
+  queue: 2
 
 app:
   publicHost: dashboard.smoke.local
@@ -17,6 +18,7 @@ app:
   sessionSecureCookie: false # kind smoke is accessed over plain HTTP
   civitasApiUrl: http://stellio.smoke.local:8090
   s3:
+    existingSecret: cividash-s3
     accessKeyId: smoke
     secretAccessKey: smoke-secret
     endpoint: http://minio.smoke.local:9000
@@ -41,3 +43,10 @@ gatewayApi:
   parentRefs:
     - name: smoke-gateway
       namespace: gateway-system
+
+networkPolicy:
+  enabled: true
+  webFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: traefik
