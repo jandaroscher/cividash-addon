@@ -65,8 +65,14 @@
       # S3 credentials, only for storage: s3: either an operator-created
       # Secret (s3.existing_secret) or vaulted keys rendered into
       # cividash-app-secret as AWS_*.
-      - (inv_addons.cividash.storage | default('s3')) != 's3' or (inv_addons.cividash.s3.existing_secret | default('') | length > 0) or (inv_addons.cividash.s3.access_key_id | default('') | length > 0)
-      - (inv_addons.cividash.storage | default('s3')) != 's3' or (inv_addons.cividash.s3.existing_secret | default('') | length > 0) or (inv_addons.cividash.s3.secret_access_key | default('') | length > 0)
+      - >-
+        (inv_addons.cividash.storage | default('s3')) != 's3'
+        or (inv_addons.cividash.s3.existing_secret | default('') | length > 0)
+        or (inv_addons.cividash.s3.access_key_id | default('') | length > 0)
+      - >-
+        (inv_addons.cividash.storage | default('s3')) != 's3'
+        or (inv_addons.cividash.s3.existing_secret | default('') | length > 0)
+        or (inv_addons.cividash.s3.secret_access_key | default('') | length > 0)
     fail_msg: >-
       Missing required keys in inv_addons.cividash.
       Expected: oidc_client_id, either db.central: true or the vaulted
