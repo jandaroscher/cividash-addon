@@ -45,8 +45,10 @@ app:
 {% set cividash_s3 = inv_addons.cividash.s3 | default({}) %}
   s3:
     existingSecret: {{ cividash_s3.existing_secret | default('') | to_json }}
-    accessKeyId: {{ cividash_s3.access_key_id | default('') | to_json }}
-    secretAccessKey: {{ cividash_s3.secret_access_key | default('') | to_json }}
+{# With existing_secret the keys stay out of the Helm values, even if the inventory still has them. #}
+{% set cividash_s3_inline = not (cividash_s3.existing_secret | default('')) %}
+    accessKeyId: {{ (cividash_s3.access_key_id | default('') if cividash_s3_inline else '') | to_json }}
+    secretAccessKey: {{ (cividash_s3.secret_access_key | default('') if cividash_s3_inline else '') | to_json }}
     endpoint: {{ cividash_s3.endpoint | default('') | to_json }}
     bucket: {{ cividash_s3.bucket | default('') | to_json }}
     publicUrl: {{ cividash_s3.public_url | default('') | to_json }}
