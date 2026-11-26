@@ -71,7 +71,7 @@ The add-on reads `cividash.cividash.*` from the environment. Defaults are in
 | --- | --- | --- |
 | `enabled` | `true` | Deploy the component |
 | `namespace` | `<instanceSlug>-cividash` | From `civitas.namespace`, like the core components |
-| `subdomain` | `dashboard` | Public host `<subdomain>.<global.domain>`; also the Keycloak client's redirect host |
+| `subdomain` | `dashboard` | Public host `<subdomain>.<global.domain>`. The Keycloak client in `keycloak-clients.yaml` is fixed to `dashboard`; with another subdomain, admin login through Keycloak needs a matching change there |
 | `storage` | `volume` | `volume`: a PersistentVolumeClaim shared by all CiviDash pods; with more than one node it needs a ReadWriteMany class (`global.storage.storageClass.rwx`). `s3`: an S3-compatible bucket, recommended for production. See [Media storage](docs/storage.md) |
 | `s3.existingSecret` | `""` | **Required** with `storage: s3`: Secret in the CiviDash namespace with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` |
 | `s3.endpoint` / `s3.bucket` | `""` | **Required** with `storage: s3` |
@@ -163,7 +163,9 @@ even when the add-on fails to render.
 
 **Migrating from CIVITAS/CORE 1:** CORE 2 has no in-place upgrade. Before the
 first deployment, create the Secret `cividash-app-key` (key `app-key`) in the
-CiviDash namespace with the `APP_KEY` of the old installation, then restore a
+CiviDash namespace with the `APP_KEY` of the old installation, with the Helm
+ownership metadata described in [Helm chart, APP_KEY](docs/helm-chart.md#app_key),
+then restore a
 dump of the old database into the new `cividash` database and copy the media
 (bucket or volume). Sessions, cache and queue live in the database and move
 with it.

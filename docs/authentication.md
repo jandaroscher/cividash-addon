@@ -1,87 +1,80 @@
 # Authentication
 
-## Admin authentication is handled by the application, not APISIX
+## Public area and admin area
 
-The APISIX gateway registration ([`tasks/apisix.yml`](../tasks/apisix.yml)) creates
-**exactly one open route**: host `public_host`, uri prefix `/*`, forwarding to
-the `cividash-web` upstream. There is **deliberately no `openid-connect` / auth
-plugin** on this route. It covers `/`, `/api/*`, `/admin`, `/filament` and
-`/docs` — the Laravel/Filament application enforces its own authentication
-(Fortify, plus optional Keycloak Socialite SSO for the admin panel).
+The add-on registers no APISIX route. CiviDash is reached only through its
+own Ingress (see [Helm chart, Routing](helm-chart.md#routing)), and nothing
+in front of it checks tokens. The public dashboard, `/api/*` and `/docs` are
+open. The Laravel/Filament application protects the admin area (`/admin`)
+itself: with local CiviDash accounts (password login) and, optionally, with
+Keycloak single sign-on.
 
-The add-on still registers a Keycloak client (`cividash`) because the
-**app** uses it, not APISIX, for admin SSO: the Socialite standard flow with
-redirect `https://{{ admin_host | default(public_host) }}/admin/auth/keycloak/callback`.
+## Keycloak client `cividash`
 
-The `cividash` client secret is written to `cividash-oidc-secret` (as the
-`KEYCLOAK_*` keys) and consumed via app env. APISIX never consumes this client.
+[`keycloak-clients.yaml`](../keycloak-clients.yaml) declares one confidential
+client, which CORE's keycloak component creates in the instance realm:
 
-## NGSI-LD machine token — shared `api-access` client
+| Setting | Value |
+| --- | --- |
+| Client ID | `cividash` |
+| Flow | Authorization code (Socialite); direct access grants off, no service account |
+| Redirect URI | `https://<subdomain>.<global.domain>/admin/auth/keycloak/callback` |
+| Client roles | `admin`, `editor` |
+| Protocol mappers | `client-roles-as-groups`: the client roles of `cividash` in the claim `groups` (ID token, access token, userinfo); `cividash-audience`: `cividash` in the access token audience |
 
-The machine-to-machine NGSI-LD token (`CIVITAS_DRIVER=ngsi-ld`,
-`CIVITAS_OAUTH_*` in `cividash-oidc-secret`) is **not** issued by the
-`cividash` client. It is issued by the shared, operator-provided
-**`api-access`** IDM client — the same client the CORE data plane (Stellio
-behind APISIX) already trusts — mirroring `redpandaconnect_addon`'s FROST
-OAuth2 wiring. `tasks/keycloak_sso.yml`:
+The subdomain in `keycloak-clients.yaml` is fixed to `dashboard`. If you
+change `cividash.cividash.subdomain`, the redirect URI no longer matches.
 
-1. fetches the `api-access` client-secret via the shared platform helper
-   `tasks/templates/keycloak_client_secret.yaml` (`client_id: IDM_CLIENT.API_ACCESS`);
-2. ensures the purpose-scoped client roles (`dataConsumer` / `dataProducer`,
-   overridable via `inv_addons.cividash.ngsi_ld_roles`) that make Keycloak
-   mint the `api:read` / `api:write` scopes the CORE APISIX gateway enforces;
-3. assigns those roles to the `api-access` service account (idempotent).
+CORE generates the client secret and stores it as Secret
+`keycloak-client-cividash` (key `client-secret`) in the keycloak namespace
+and in the CiviDash namespace. The chart reads it through `secretKeyRef`
+(`keycloak.clientSecret`); it never appears in Helm values.
 
-The `cividash` client has `serviceAccountsEnabled: false`; it only carries the
-auth-code SSO flow and its audience mapper.
+The add-on's values set the other Keycloak settings of the chart:
 
-> **Platform dependency:** `IDM_CLIENT.API_ACCESS` and the shared task
-> `tasks/templates/keycloak_client_secret.yaml` are provided by the CORE
-> control plane at run time (not vendored in this add-on), exactly as
-> `redpandaconnect_addon` relies on them. Keep the `dataConsumer`/`dataProducer`
-> convention in sync with the platform's api:read/api:write scope mapping.
+| Chart value | Source |
+| --- | --- |
+| `keycloak.enabled` | `true` |
+| `keycloak.baseUrl` | `https://<keycloak.app.subdomain>.<global.domain><keycloak.app.pathPrefix>` |
+| `keycloak.realm` | `global.instanceSlug` |
+| `keycloak.clientId` | `cividash` |
+| `keycloak.clientSecret` | Secret `keycloak-client-cividash`, key `client-secret` |
+| `keycloak.baseUrlInternal` | Not set. Set it through `cividash.cividash.rawValues` if the app has to exchange the code at another URL than the public one |
 
-> **Note:** If Filament admin access is gated on a Keycloak role/group, the
-> first admin must be granted the `cividash:admin` role in Keycloak
-> manually. The add-on creates the client roles (`admin`, `editor`) but does
-> not assign them to any user.
+With the self-signed platform CA (`global.ingress.clusterIssuer:
+selfsigned-ca`), the PHP pods also trust the CA from the Secret
+`custom-ca-cert`, so the server-side token exchange with the public Keycloak
+URL works (see [Helm chart, Platform CA](helm-chart.md#platform-ca)).
 
-## Operator prerequisites (M2M / `api-access`)
+## Granting access
 
-The NGSI-LD machine token rides on the shared `api-access` client, which the
-**operator** owns and provisions — the add-on does not create it and, mirroring
-`redpandaconnect_addon`, deliberately does **not** enable service accounts or
-edit group membership on it. For the M2M flow to actually work, `api-access`
-must be provisioned so that:
+The add-on creates the roles but assigns them to nobody. In the Keycloak
+admin console, open the instance realm and assign the client role `admin` or
+`editor` of the client `cividash` to each user who administers the dashboard,
+directly or through a group. The roles reach the app in the `groups` claim.
 
-1. **`serviceAccountsEnabled = true`** — otherwise Keycloak mints **no**
-   client-credentials token at all (`401 unauthorized_client`).
-2. The **`api:read` / `api:write`** scopes are requestable by the client (these
-   are the scopes the CORE APISIX gateway enforces in front of Stellio). The
-   add-on requests them via `CIVITAS_OAUTH_SCOPE` (default `api:read api:write`,
-   override with `inv_addons.cividash.ngsi_ld_scope`).
-3. The **`api-access` service account is a member of the tenant group** (e.g.
-   `ds_open_data`) with the SPI-read attributes, so the issued token carries a
-   non-empty **`tenants`** claim. With an empty claim Stellio refuses every
-   request (`no access to tenant ds_open_data`) even though a token was minted.
+| Role | Access |
+| --- | --- |
+| `admin` | Full access to the CiviDash admin area |
+| `editor` | Edits dashboard content in the admin area |
 
-**CORE 1.8.x.** A fresh CORE 1.8.1 deploy creates `api-access` with
-`serviceAccountsEnabled = false`, and creates the tenant group (for example
-`ds_open_data`, from `inv_access.open_data_dataspace`) with the attributes
-`service` and `tenant` already set. Two operator steps are then enough: enable
-service accounts on `api-access` (1), and add the user
-`service-account-api-access` to the tenant group (3). On CORE 1.6.x the group
-attributes had to be set by hand as well.
+A role change takes effect at the user's next Keycloak login.
 
-**Deploy-time preflight.** [`tasks/preflight_m2m.yml`](../tasks/preflight_m2m.yml)
-runs right after `keycloak_sso.yml` and verifies (1)–(3) against the live realm
-before any workloads are deployed: it requests a client-credentials token for
-the api-access client and asserts both that a token is issued and that its
-`tenants` claim is non-empty. On failure it stops the deploy with a message
-naming the missing operator step above, instead of shipping a dashboard that
-cannot reach Stellio. Skip the check consciously with
-`inv_addons.cividash.m2m_preflight_enabled: false`.
+## Known gap: PKCE
 
-The pure decode/assert logic ([`tasks/preflight_m2m_assert.yml`](../tasks/preflight_m2m_assert.yml))
-is proved in isolation against mocked token payloads by
-[`dev/preflight-assert.test.yml`](../dev/preflight-assert.test.yml).
+CORE 2 enables PKCE (`pkce.code.challenge.method: S256`) on every
+confidential client, including `cividash`. Keycloak then rejects an
+authorization request without a code challenge. The CiviDash release pinned
+in [`images.yaml`](../images.yaml) does not send PKCE yet, so Keycloak login
+to the admin area fails until a CiviDash release with PKCE support is
+pinned. Password login with local CiviDash accounts is not affected.
+
+## NGSI-LD data sync
+
+The chart can sync data from the platform (`civitas.*`). CORE 2 does not
+provide NGSI-LD yet, so the add-on's values keep it off
+(`civitas.enabled: false`), and the dashboards are maintained in the admin
+area or imported. The `cividash` client has no service account and no access
+to platform datasets. How an add-on's own client gets read access to
+datasets is an open question with CIVITAS/CORE; this page will describe it
+once the platform defines it.

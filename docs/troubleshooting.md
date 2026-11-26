@@ -1,32 +1,82 @@
 # Troubleshooting
 
-## Migrate/seed Job fails with `could not find driver`
+Commands below assume the default namespace `<instanceSlug>-cividash`.
 
-The image pinned in `vars/software_references.yml` includes `pdo_pgsql`; a
-custom or mirrored image without it fails `cividash-migrate`/`cividash-seed` with `could not
-find driver` — see
+## Render fails with a `cividash.cividash.*` message
+
+The add-on's values check the environment while rendering. With
+`storage: s3`, `s3.existingSecret`, `s3.endpoint`, `s3.bucket` and
+`s3.publicUrl` must be set (`publicUrl` may be empty), and `storage` must be
+`s3` or `volume`. The message names the missing or invalid key.
+
+## Hook Job or pods stuck in `CreateContainerConfigError`
+
+A Secret the containers read through `secretKeyRef` is missing. Check the
+events of the pod (`kubectl -n <instanceSlug>-cividash describe pod <pod>`):
+
+| Missing Secret | Cause |
+| --- | --- |
+| The one in `s3.existingSecret` | The operator creates it before the deployment, see [Media storage](storage.md#storage-s3) |
+| `cividash-app-key`, `db-cividash` | The secrets component was not applied after adding `cividash` to `components` |
+| `keycloak-client-cividash` | Same; the secrets component generates the client secret from `keycloak-clients.yaml` |
+
+Because `cividash-migrate` runs before the workloads, the deployment then
+fails at the Helm timeout.
+
+## `cividash-migrate` cannot reach the database
+
+A timeout to `postgres-cluster-rw` usually means the network policy in the
+postgres namespace is missing. Apply the networkpolicies component after
+adding the add-on; it creates `cividash-postgres` from
+[`networkpolicies.yaml`](../networkpolicies.yaml). An authentication error
+means the role's password and `db-cividash` differ; see
 [Database](database.md).
 
-## `cividash-fpm`/`cividash-web` stuck in `ImagePullBackOff`
+## Migrate or seed Job fails with `could not find driver`
 
-For a custom registry mirror, set `inv_addons.cividash.image_pull_secret` (chart value `images.pullSecret`) to the registry Secret name. The chart adds it to each workload Pod's `spec.imagePullSecrets`.
+The image pinned in [`images.yaml`](../images.yaml) includes `pdo_pgsql`. A
+custom or mirrored image without it fails `cividash-migrate` and
+`cividash-seed` with `could not find driver`. See [Database](database.md).
 
-## Deploy stops at the M2M preflight
+## `cividash-fpm` or `cividash-web` stuck in `ImagePullBackOff`
 
-[`tasks/preflight_m2m.yml`](../tasks/preflight_m2m.yml) stops the deploy before any
-workloads are created if the shared `api-access` Keycloak client cannot mint a
-client-credentials token, or the token's `tenants` claim is empty — see
-[Operator prerequisites (M2M / api-access)](authentication.md#operator-prerequisites-m2m--api-access)
-for the three operator-side prerequisites it checks. Only skip it with
-`inv_addons.cividash.m2m_preflight_enabled: false` if NGSI-LD sync not
-working is acceptable for your deployment.
+For a registry mirror that needs credentials, create an image pull Secret in
+the CiviDash namespace and set `images.pullSecret` to its name through
+`cividash.cividash.rawValues`. The chart adds it to every pod. See
+[Helm chart, Images](helm-chart.md#images).
 
-## Keycloak SSO login loops back to `/admin/login`
+## Dashboard host answers 404, 502 or times out
 
-If Keycloak SSO redirects back to `/admin/login` instead of reaching the
-Filament panel, the app's server-side token exchange is likely failing against
-the public HTTPS Keycloak endpoint (a self-signed platform CA yields cURL error
-60). Set `inv_addons.cividash.keycloak_base_url_internal` to the in-cluster
-Keycloak service (see the commented-out default in
-[`default_inventory.yml`](../default_inventory.yml)) so the exchange happens
-over the internal `http` endpoint instead.
+- The Ingress class or controller does not match the cluster: check
+  `global.ingress.ingressClass` and `global.ingress.controller`.
+- The networkpolicies component was not applied, so the default deny blocks
+  the ingress controller.
+- With Linkerd and an unmeshed ingress controller,
+  `global.serviceMesh.allowUnauthenticatedIngress` must be `true`; otherwise
+  the `Server` for `cividash-web` rejects plaintext traffic. See
+  [Helm chart, Linkerd](helm-chart.md#linkerd).
+
+## Uploads fail with HTTP 413
+
+The nginx ingress controller limits request bodies to 1m by default. The
+add-on sets `proxy-body-size: 32m` for `global.ingress.controller: nginx`
+only. For other controllers, raise the limit through
+`rawValues.ingress.annotations`.
+
+## Keycloak login to the admin area fails
+
+- Keycloak shows an error about a missing code challenge: CORE 2 requires
+  PKCE for the client `cividash`, and the pinned CiviDash release does not
+  send it yet. Use a local CiviDash account until a release with PKCE is
+  pinned; see [Authentication, Known gap: PKCE](authentication.md#known-gap-pkce).
+- Keycloak redirects back with an invalid redirect URI: the client's redirect
+  host is `dashboard` (`keycloak-clients.yaml`), so a different
+  `cividash.cividash.subdomain` does not match.
+- The login loops back to `/admin/login`: the server-side token exchange
+  fails. With a private CA other than CORE's self-signed one, the PHP pods do
+  not trust Keycloak's certificate; set `platformCa.secretName` through
+  `rawValues` to a Secret in the CiviDash namespace with that CA (key
+  `ca.crt`). See [Helm chart, Platform CA](helm-chart.md#platform-ca).
+- Keycloak login succeeds but CiviDash grants no admin access: the user has
+  neither client role. Assign `admin` or `editor` of `cividash`; see
+  [Authentication, Granting access](authentication.md#granting-access).
