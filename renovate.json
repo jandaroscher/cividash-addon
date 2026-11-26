@@ -3,6 +3,11 @@
   "extends": [
     "config:recommended"
   ],
+  "baseBranchPatterns": [
+    "main",
+    "v2"
+  ],
+  "useBaseBranchConfig": "merge",
   "customManagers": [
     {
       "customType": "regex",
