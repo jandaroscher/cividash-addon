@@ -1,0 +1,8 @@
+---
+cividash:
+  app:
+    repository: ghcr.io/jandaroscher/cividash-app
+    tag: '1.2.1'
+  web:
+    repository: ghcr.io/jandaroscher/cividash-web
+    tag: '1.2.1'

@@ -1,0 +1,138 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cividash-web
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-web
+spec:
+  replicas: {{ .Values.replicas.web }}
+  # Explicit zero-downtime rollout (what the defaults already do for these
+  # replica counts), required by the CIVITAS/CORE 2 production policies.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-web
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-web
+    spec:
+      # No Kubernetes API access needed.
+      automountServiceAccountToken: false
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      # cividash-web is built on nginxinc/nginx-unprivileged: every process runs as
+      # the nginx user (uid 101) and listens on 8080, so no capability is needed.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      # Read-only root filesystem: nginx writes its pid and temp files to /tmp,
+      # and the image's 05-resolver.sh fills the resolver and FPM upstream into
+      # conf.d/default.conf at start. conf.d is therefore an emptyDir, seeded
+      # with the image's own default.conf by the init container.
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-conf
+          emptyDir: {}
+        {{- if eq .Values.storage.type "volume" }}
+        {{- include "cividash.storage.volume" . | trimPrefix "\n" | nindent 6 }}
+        {{- end }}
+      initContainers:
+        - name: nginx-conf
+          image: {{ include "cividash.webImage" . }}
+          imagePullPolicy: {{ .Values.images.web.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          command: ["cp", "-R", "/etc/nginx/conf.d/.", "/nginx-conf/"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /nginx-conf
+      containers:
+        - name: web
+          image: {{ include "cividash.webImage" . }}
+          imagePullPolicy: {{ .Values.images.web.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8080
+          # Keep serving while the endpoint removal reaches kube-proxy and the
+          # gateway; without it, rollouts briefly answer 502/504.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "10"]
+          readinessProbe:
+            httpGet:
+              path: /up
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+          {{- if eq .Values.storage.type "volume" }}
+            # nginx serves /storage straight from the shared volume.
+            - name: public-media
+              mountPath: /var/www/html/storage/app/public
+              readOnly: true
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cividash-web
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cividash-web
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 80
+      # Service stays on 80 for Ingress/HTTPRoute/APISIX; the container listens on 8080.
+      targetPort: 8080

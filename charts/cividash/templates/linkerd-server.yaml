@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+{{- /*
+Linkerd Server for the cividash-web port. With a mandatory default inbound
+policy on the namespace, the ingress controller could otherwise only reach
+cividash-web with a mesh identity. Same approach as the APISIX data plane in
+CIVITAS/CORE 2: allowUnauthenticated accepts an unmeshed ingress controller.
+*/}}
+{{- if .Values.linkerd.enabled }}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: cividash-web
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-web
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-web
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  port: http
+  proxyProtocol: HTTP/1
+  accessPolicy: {{ ternary "all-unauthenticated" "all-authenticated" .Values.linkerd.allowUnauthenticated }}
+{{- end }}

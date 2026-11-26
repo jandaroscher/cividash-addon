@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+{{- if .Values.platformCa.secretName }}
+# Points PHP's curl and openssl at the bundle the ca-bundle init container
+# builds from the system CAs and the platform CA Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cividash-platform-ca
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+data:
+  platform-ca.ini: |
+    curl.cainfo = /ca-bundle/ca-bundle.crt
+    openssl.cafile = /ca-bundle/ca-bundle.crt
+{{- end }}

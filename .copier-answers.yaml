@@ -1,0 +1,8 @@
+---
+# Changes here will be overwritten by Copier.
+_commit: v2.0.2
+_src_path: https://gitlab.com/civitas-connect/civitas-core/civitas-core-v2/civitas-core-deployment.git
+componentName: CiviDash
+componentSlug: cividash
+releases: cividash
+shortDescription: Data dashboard for urban key figures (CiviDash)

@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cividash-scheduler
+  labels:
+    {{- include "cividash.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cividash-scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cividash-scheduler
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "cividash.labels" . | nindent 8 }}
+        app.kubernetes.io/name: cividash-scheduler
+    spec:
+      # No Kubernetes API access needed.
+      automountServiceAccountToken: false
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 82
+        runAsGroup: 82
+        fsGroup: 82
+        # Chown the media volume only when its root does not match yet.
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      {{- include "cividash.initContainers" . | nindent 6 }}
+      {{- include "cividash.volumes" . | nindent 6 }}
+      containers:
+        - name: scheduler
+          image: {{ include "cividash.appImage" . }}
+          imagePullPolicy: {{ .Values.images.app.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 82
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Touches a heartbeat after every schedule:run; the liveness probe
+          # restarts the pod once the loop has been stuck for an hour.
+          command: ["sh", "-c", "while true; do php artisan schedule:run --no-interaction; touch /tmp/scheduler-heartbeat; sleep 60; done"]
+          envFrom:
+            - secretRef:
+                name: cividash-app-secret
+            - secretRef:
+                name: cividash-db-secret
+          {{- include "cividash.env" . | nindent 10 }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "test -n \"$(find /tmp/scheduler-heartbeat -mmin -60)\""]
+            initialDelaySeconds: 300
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- include "cividash.volumeMounts" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.resources.scheduler | nindent 12 }}

@@ -3,7 +3,43 @@
 All notable changes to this add-on are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [2.0.0] - Unreleased
+
+First release for CIVITAS/CORE 2, on the branch `v2`. The add-on for
+CIVITAS/CORE 1 continues as `1.8.x` on `main`.
+
+### Breaking
+
+- The add-on is a CIVITAS/CORE 2 component: `civitas-component.yaml`,
+  `charts.yaml`, `images.yaml`, `default-environment.yaml.gotmpl`, Helmfile and
+  values per profile at the repository root, configured through
+  `cividash.cividash.*` instead of `inv_addons.cividash.*`. The Ansible
+  tasks, the default inventory and the kind smoke under `dev/` are removed.
+- The chart moved from `chart/cividash` to `charts/cividash`. It no longer
+  takes credentials as values: `APP_KEY`, the database password, the
+  Keycloak client secret and the S3 keys come from existing Secrets
+  (`app.keySecret`, `db.passwordSecret`, `keycloak.clientSecret`,
+  `app.s3.existingSecret`). `cividash-oidc-secret`, `app.key`,
+  `db.password`, `app.s3.accessKeyId`/`secretAccessKey` and
+  `app.civitasApiUrl` are gone; `platformCa` now names a Secret.
+- No APISIX route: the dashboard is reached through its own Ingress only.
+- The data sync from the platform is off (`civitas.enabled: false`) until
+  CIVITAS/CORE 2 provides NGSI-LD.
+
+### Added
+
+- Keycloak client `cividash` with the roles `admin` and `editor`
+  (`keycloak-clients.yaml`), database `cividash` on the platform's
+  PostgreSQL (`databases.yaml`), generated `APP_KEY` and database password
+  (`secrets.yaml`), network policies with a Linkerd variant, and a policy
+  exception for the single scheduler.
+- Chart: Keycloak settings (`keycloak.*`), PodDisruptionBudgets for fpm and
+  web, a Linkerd `Server` for cividash-web, and
+  `automountServiceAccountToken: false` on every pod.
+- CI runs CORE's `verify-addon.sh` from CIVITAS/CORE 2.0.2 and a render with
+  profile `production`.
+
+## 1.8.x (branch `main`)
 
 ### Added
 

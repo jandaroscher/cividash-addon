@@ -1,0 +1,48 @@
+---
+# With Linkerd, meshed traffic arrives on the proxy's inbound port 4143
+# instead of the application port. Same peers as networkpolicies.yaml.
+cividash-web-allow-linkerd:
+  podSelector:
+    app.kubernetes.io/name: cividash-web
+    app.kubernetes.io/instance: cividash-cividash
+  policyTypes:
+    - Ingress
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 4143
+
+cividash-fpm-allow-linkerd:
+  podSelector:
+    app.kubernetes.io/name: cividash-fpm
+    app.kubernetes.io/instance: cividash-cividash
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cividash-web
+              app.kubernetes.io/instance: cividash-cividash
+          componentNamespace: cividash
+      ports:
+        - protocol: TCP
+          port: 4143
+
+cividash-postgres-allow-linkerd:
+  componentNamespace: postgres
+  podSelector:
+    cnpg.io/cluster: postgres-cluster
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: cividash
+              app.kubernetes.io/instance: cividash-cividash
+          componentNamespace: cividash
+      ports:
+        - protocol: TCP
+          port: 4143

@@ -1,0 +1,102 @@
+---
+{{- $this := .Values.cividash.cividash }}
+{{- $global := .Values.global }}
+# Checklist:
+# - [x] Containers run as non-root with `readOnlyRootFilesystem`
+# - [x] Health probes
+# - [x] Graceful shutdown (preStop on fpm and web)
+# - [x] Standard labels
+# - [x] ServiceAccount with least privilege where required (none needed)
+# - [x] Named ports
+# - [x] Ingress with TLS
+{{- $host := printf "%s.%s" $this.subdomain $global.domain }}
+{{- $keycloakHost := printf "%s.%s" (default "" .Values.keycloak.app.subdomain) $global.domain | trimPrefix "." }}
+{{- $keycloakPath := .Values.keycloak.app.pathPrefix | trimSuffix "/" }}
+{{- $selfSignedCa := eq $global.ingress.clusterIssuer "selfsigned-ca" }}
+{{- $linkerd := and ($global.serviceMesh.enable | default false) (eq ($global.serviceMesh.type | default "") "linkerd") }}
+{{- if not (has $this.storage (list "s3" "volume")) }}
+{{- fail (printf "cividash.cividash.storage must be \"s3\" or \"volume\", got %q" $this.storage) }}
+{{- end }}
+
+{{- range $name, $image := .Values.images.cividash }}
+{{- $parts := splitList "/" $image.repository }}
+{{- if eq $name "app" }}
+images:
+{{- end }}
+  {{ $name }}:
+    registry: {{ first $parts }}
+    repository: {{ rest $parts | join "/" }}
+    tag: {{ $image.tag | quote }}
+    pullPolicy: IfNotPresent
+{{- end }}
+
+app:
+  publicHost: {{ $host }}
+  keySecret:
+    name: cividash-app-key
+    key: app-key
+  {{- if eq $this.storage "s3" }}
+  s3:
+    existingSecret: {{ required "cividash.cividash.s3.existingSecret is required for storage: s3" $this.s3.existingSecret }}
+    endpoint: {{ required "cividash.cividash.s3.endpoint is required for storage: s3" $this.s3.endpoint }}
+    bucket: {{ required "cividash.cividash.s3.bucket is required for storage: s3" $this.s3.bucket }}
+    publicUrl: {{ required "cividash.cividash.s3.publicUrl is required for storage: s3" $this.s3.publicUrl }}
+    region: {{ $this.s3.region }}
+    usePathStyle: {{ $this.s3.usePathStyle }}
+  {{- end }}
+
+storage:
+  type: {{ $this.storage }}
+  volume:
+    storageClassName: {{ $global.storage.storageClass.rwx | quote }}
+
+db:
+  host: {{ .Values.databases.cividash.hostServiceName }}.{{ .Values.postgres.cluster.namespace }}.svc.cluster.local
+  port: {{ .Values.databases.cividash.port }}
+  database: {{ .Values.databases.cividash.name }}
+  username: {{ .Values.databases.cividash.user }}
+  passwordSecret:
+    name: {{ .Values.databases.cividash.secret.name }}
+    key: {{ .Values.databases.cividash.secret.key }}
+
+keycloak:
+  enabled: true
+  baseUrl: https://{{ $keycloakHost }}{{ $keycloakPath }}
+  realm: {{ $global.instanceSlug }}
+  clientId: cividash
+  clientSecret:
+    name: keycloak-client-cividash
+    key: client-secret
+
+# CORE 2 has no NGSI-LD broker yet; the data sync stays off.
+civitas:
+  enabled: false
+
+platformCa:
+  # The prepare component distributes the self-signed platform CA.
+  secretName: {{ ternary "custom-ca-cert" "" $selfSignedCa | quote }}
+  key: ca.crt
+
+ingress:
+  enabled: true
+  className: {{ $global.ingress.ingressClass }}
+  clusterIssuer: {{ $global.ingress.clusterIssuer }}
+  annotations:
+    {{- if eq $global.ingress.controller "traefik" }}
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    {{- else if eq $global.ingress.controller "haproxy" }}
+    haproxy.org/ssl-redirect: "true"
+    haproxy.org/ssl-redirect-port: "443"
+    {{- else }}
+    # Same upload limit as cividash-web (client_max_body_size 32m); the
+    # controller default of 1m rejects larger tile images and imports.
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+    {{- end }}
+
+linkerd:
+  enabled: {{ $linkerd }}
+  allowUnauthenticated: {{ $global.serviceMesh.allowUnauthenticatedIngress | default false }}
+
+# Network policies come from networkpolicies.yaml, not from the chart.
+networkPolicy:
+  enabled: false

@@ -1,0 +1,11 @@
+---
+cividash:
+  name: 'cividash'
+  embedded: true
+  user: 'cividash'
+  secret:
+    name: 'db-cividash'
+    key: 'password'
+    generate: true
+  hostServiceName: 'postgres-cluster-rw'
+  port: 5432

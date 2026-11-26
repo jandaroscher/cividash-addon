@@ -1,0 +1,15 @@
+---
+{{- $this := .Values.cividash.cividash }}
+{{- $global := .Values.global }}
+# Checklist:
+# - [x] Minimal Resources (chart defaults)
+# - [x] Minimal storage
+# - [x] 1 Replica
+
+replicas:
+  fpm: 1
+  web: 1
+  queue: 1
+
+podDisruptionBudget:
+  enabled: false

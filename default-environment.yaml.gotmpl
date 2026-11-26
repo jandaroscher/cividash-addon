@@ -1,0 +1,23 @@
+---
+cividash:
+  cividash:
+    enabled: true
+    namespace: {{ include "civitas.namespace" (dict "global" .Values.global "suffix" "cividash") }}
+    # Served at https://<subdomain>.<global.domain>
+    subdomain: dashboard
+    # Where uploaded public media is stored:
+    #   volume: a PersistentVolumeClaim shared by all CiviDash pods. With more
+    #           than one node it needs a ReadWriteMany storage class
+    #           (global.storage.storageClass.rwx).
+    #   s3:     an S3-compatible bucket, recommended for production.
+    storage: volume
+    # Bucket for storage: s3. The operator creates the Secret named in
+    # existingSecret in the cividash namespace, with the keys
+    # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+    s3:
+      existingSecret: ''
+      endpoint: ''
+      bucket: ''
+      publicUrl: ''
+      region: us-east-1
+      usePathStyle: true

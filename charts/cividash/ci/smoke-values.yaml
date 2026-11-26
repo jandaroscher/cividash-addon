@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+# Values exercising every conditional branch, for `helm lint`/`helm template`
+# in CI. The CIVITAS/CORE 2 values live in values/cividash/.
+images:
+  pullSecret: registry-creds
+
+replicas:
+  fpm: 2
+  web: 2
+  queue: 2
+
+app:
+  publicHost: dashboard.smoke.local
+  keySecret:
+    name: cividash-app-key
+  s3:
+    existingSecret: cividash-s3
+    endpoint: http://minio.smoke.local:9000
+    bucket: cividash-media
+    publicUrl: http://minio.smoke.local:9000/cividash-media
+
+civitas:
+  enabled: true
+  driver: sensorthings
+  apiUrl: http://frost.smoke.local/FROST-Server/v1.1
+
+keycloak:
+  enabled: true
+  baseUrl: https://idm.smoke.local
+  realm: smoke
+  clientSecret:
+    name: keycloak-client-cividash
+
+platformCa:
+  secretName: custom-ca-cert
+
+db:
+  host: cividash-smoke-postgres
+  passwordSecret:
+    name: db-cividash
+
+ingress:
+  enabled: true
+  className: traefik
+  clusterIssuer: selfsigned
+
+gatewayApi:
+  enabled: true
+  parentRefs:
+    - name: smoke-gateway
+      namespace: gateway-system
+
+networkPolicy:
+  enabled: true
+  webFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: traefik
+
+podDisruptionBudget:
+  enabled: true
+
+linkerd:
+  enabled: true

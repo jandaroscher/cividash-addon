@@ -1,0 +1,56 @@
+---
+# The networkpolicies component denies all ingress to the cividash namespace
+# by default. These policies open exactly the paths CiviDash needs.
+
+# cividash-web is the only entry point. It is exposed by its own Ingress, and
+# the ingress controller runs in a cluster-specific namespace, so the port is
+# open to any source (like the APISIX data plane in CIVITAS/CORE).
+cividash-web:
+  podSelector:
+    app.kubernetes.io/name: cividash-web
+    app.kubernetes.io/instance: cividash-cividash
+  policyTypes:
+    - Ingress
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8080
+
+# PHP-FPM only answers cividash-web (FastCGI).
+cividash-fpm:
+  podSelector:
+    app.kubernetes.io/name: cividash-fpm
+    app.kubernetes.io/instance: cividash-cividash
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cividash-web
+              app.kubernetes.io/instance: cividash-cividash
+          componentNamespace: cividash
+      ports:
+        - protocol: TCP
+          port: 9000
+
+# Lets the CiviDash PHP pods (fpm, queue, scheduler, migrate and seed jobs)
+# reach the shared PostgreSQL cluster. The policy lives in the postgres
+# namespace, where the core policy only lists the core components.
+cividash-postgres:
+  componentNamespace: postgres
+  podSelector:
+    cnpg.io/cluster: postgres-cluster
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: cividash
+              app.kubernetes.io/instance: cividash-cividash
+          componentNamespace: cividash
+      ports:
+        - protocol: TCP
+          port: 5432
