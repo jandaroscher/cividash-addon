@@ -1,15 +1,15 @@
 # Security policy
 
 This repository packages [CiviDash](https://github.com/jandaroscher/cividash) as a
-CIVITAS/CORE add-on (Ansible role + Helm chart). It ships no application code of its
+CIVITAS/CORE 2 add-on (Helmfile component + Helm chart). It ships no application code of its
 own; the application security policy, supported versions and vulnerability handling
 are documented in the
 [main repository's `SECURITY.md`](https://github.com/jandaroscher/cividash/blob/main/SECURITY.md).
 
 ## Reporting a vulnerability in this add-on
 
-If you find a security issue in the deployment logic here (Ansible tasks, Helm
-templates, Keycloak/APISIX wiring), please **do not** open a public GitHub/GitLab
+If you find a security issue in the deployment logic here (Helmfile, Helm
+templates, Keycloak client, network policies), please **do not** open a public GitHub/GitLab
 issue. Instead, report it privately:
 
 - Email: `support@janda-roscher.de`

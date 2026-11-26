@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: EUPL-1.2+
 
 # Attaches the SPDX SBOMs of the pinned CiviDash images to an add-on release.
-# The add-on itself only ships Ansible tasks and a Helm chart (components in
-# docs/components.md); the images it deploys are described by the SBOMs that
+# The add-on itself only ships CIVITAS/CORE component files and a Helm chart
+# (components in docs/components.md); the images it deploys are described by the SBOMs that
 # the CiviDash release pipeline publishes. Run it manually to re-attach them.
 name: Release SBOM
 
@@ -38,8 +38,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          app=$(yq '.software.addon_cividash.cividash_app.tag' vars/software_references.yml)
-          web=$(yq '.software.addon_cividash.cividash_web.tag' vars/software_references.yml)
+          # CORE 2 releases (branch v2) pin tags in images.yaml, CORE 1 releases in vars/.
+          if [ -f images.yaml ]; then
+            app=$(yq '.cividash.app.tag' images.yaml)
+            web=$(yq '.cividash.web.tag' images.yaml)
+          else
+            app=$(yq '.software.addon_cividash.cividash_app.tag' vars/software_references.yml)
+            web=$(yq '.software.addon_cividash.cividash_web.tag' vars/software_references.yml)
+          fi
           mkdir sbom
           gh release download "v$app" --repo jandaroscher/cividash --dir sbom \
             --pattern "cividash-app-$app.spdx.json"

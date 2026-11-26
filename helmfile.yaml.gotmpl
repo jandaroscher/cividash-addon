@@ -1,0 +1,77 @@
+---
+bases:
+  # addons live in deployment/addons/<name>, one level deeper than components/<name>
+  - "../../../defaults/helm-defaults.yaml"
+---
+{{- $componentData := (readFile "./civitas-component.yaml" | fromYaml) }}
+
+{{- $root := .Values }}
+{{- $component := $componentData.component }}
+{{- $parts :=  $componentData.parts }}
+
+repositories:
+{{- $alreadyAdded := dict }}
+{{- range $parts }}
+  {{- $part := . }}
+  {{- $repoUrl := index $root.charts $component $part.name "repository" | default "" }}
+  {{- if ne $repoUrl "" }}
+    {{- $chart := index $root.charts $component $part.name "chart" }}
+    {{- $chartParts := splitList "/" $chart }}
+    {{- $repoName := index $chartParts 0 }}
+    {{- if not (hasKey $alreadyAdded $repoName) }}
+      {{- $_ := set $alreadyAdded $repoName true }}
+  - name: cc2-{{ $repoName }}
+    url: {{ $repoUrl }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+releases:
+  {{- range $parts }}
+  {{- $part := . }}
+  {{- $releaseName := printf "%s-%s" ($component | kebabcase) $part.name }}
+  {{- $repoUrl := index $root.charts $component $part.name "repository" | default "" }}
+  - name: {{ $releaseName }}
+    labels:
+      release: {{ $releaseName }}
+      {{- range $key, $value := (index $part "extraLabels" | default dict) }}
+      {{ $key }}: {{ $value }}
+      {{- end }}
+    namespace: {{ index $root $component $part.name "namespace" }}
+    {{- if ne $repoUrl "" }}
+    chart: cc2-{{ index $root.charts $component $part.name "chart" }}
+    {{- else }}
+    chart: {{ index $root.charts $component $part.name "chart" }}
+    {{- end }}
+    {{- if index $root.charts $component $part.name "version" }}
+    version: {{ index $root.charts $component $part.name "version" }}
+    {{- end }}
+    createNamespace: {{ $root.global.createNamespaces }}
+    {{- if index $part "timeout" }}
+    timeout: {{ $part.timeout }}
+    {{- end }}
+    installed: {{ index $root $component $part.name "enabled" }}
+    condition: {{ $component }}.{{ $part.name }}.enabled
+    {{- if index $part "needs" }}
+    needs:
+      {{ range index $part "needs" }}
+        {{- $items := splitList "." . -}}
+        {{- $depComponent := index $items 0 -}}
+        {{- $depPart := index $items 1 -}}
+      - {{ index $root $depComponent $depPart "namespace" }}/{{ printf "%s-%s" ($depComponent | kebabcase) $depPart }}
+      {{- end }}
+    {{- end }}
+    {{- if index $part "hooks" }}
+    hooks:
+      {{- range index $part "hooks" }}
+      - {{ . | toYaml | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    values:
+      - values/{{ $part.name | kebabcase }}/base-values.yaml.gotmpl
+      - values/{{ $part.name | kebabcase }}/{{ $root.global.profile }}-values.yaml.gotmpl
+      - {{- index $root $component $part.name "rawValues" | default dict | toYaml | nindent 8 }}
+  {{- end }}
+
+commonLabels:
+  component: {{ $component }}

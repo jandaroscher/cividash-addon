@@ -7,252 +7,201 @@
 </h1>
 
 Packages **CiviDash**, the sustainability dashboard (Laravel 12 + Filament +
-a Vue 3 SPA), as a **CIVITAS/CORE** add-on. This is a **deploy-only**
-repository: a local Helm chart ([`chart/cividash/`](chart/cividash/))
-installed through the central platform Helm task, plus `uri`-based Keycloak /
-APISIX Admin-API calls for SSO and gateway registration (outside Helm's
-scope). The application code lives in the
-[CiviDash main repository](https://github.com/jandaroscher/cividash)
+a Vue 3 SPA), as a **CIVITAS/CORE 2** add-on. This is a **deploy-only**
+repository: CIVITAS/CORE component files at the repository root and a local
+Helm chart ([`charts/cividash/`](charts/cividash/)), deployed by the
+platform's Helmfile like every other component. The application code lives
+in the [CiviDash main repository](https://github.com/jandaroscher/cividash)
 and ships here as prebuilt container images.
+
+This branch (`v2`, add-on `2.x`) targets CIVITAS/CORE 2. The add-on for
+CIVITAS/CORE 1 (Ansible, add-on `1.x`) stays on `main`.
 
 ## Quick start
 
-Clone (or copy/symlink) this repository into the `addons/` folder of the
-`civitas_core` deployment repository as `addons/cividash_addon/`, activate it,
-and set the required config:
+Add the repository as a Git submodule to your deployment and register it as
+a component:
 
-```yaml
-inv_addons:
-  import: true
-  addons:
-    - 'addons/cividash_addon/tasks.yml'
-  cividash:
-    enable: true
-    public_host: "dashboard.{{ DOMAIN }}"
-    db:
-      host: "cividash-postgres.core-postgres.svc.cluster.local"  # REQUIRED
-      # password: "..."  # REQUIRED, supply via vaulted inventory
-    # Media on S3 (default). For a volume instead of S3, set
-    # storage: "volume" and drop the s3 block, see docs/storage.md.
-    s3:
-      endpoint: "https://s3.{{ DOMAIN }}"
-      bucket: "cividash"
-      # access_key_id / secret_access_key: REQUIRED, supply via vaulted inventory
+```bash
+cd deployment/addons/
+git submodule add -b v2 https://github.com/jandaroscher/cividash-addon.git cividash
 ```
 
-Then run the platform deploy. The add-on installs after all other
-core-platform tasks. To run only this add-on, use the tags `addons` and
-`addon_cividash`.
+The directory name must be `cividash`. Add `cividash` to the `components`
+list in `deployment/environments/<env>/global.yaml.gotmpl`, after the core
+components:
 
-See [Configuration](#configuration) for the full set of options and
-[Required vaulted keys](#required-vaulted-keys) for everything that has no
-default and must come from your vaulted inventory.
+```yaml
+components:
+  # ... platform components ...
+  - cividash
+```
+
+Configure it in an environment file, e.g.
+`deployment/environments/<env>/cividash.yaml.gotmpl`, then deploy:
+
+```yaml
+cividash:
+  cividash:
+    subdomain: dashboard         # https://dashboard.<global.domain>
+    storage: s3                  # recommended for production, see below
+    s3:
+      existingSecret: cividash-s3
+      endpoint: https://s3.example.org
+      bucket: cividash
+      publicUrl: ""
+```
+
+```bash
+helmfile -f deployment/helmfile-instance.yaml.gotmpl apply -e <env> --selector component=cividash
+```
+
+With `storage: s3`, create the Secret named in `existingSecret` in the
+CiviDash namespace (`<instanceSlug>-cividash`) first, with the keys
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Then assign the Keycloak
+client roles `admin` or `editor` of the client `cividash` to the users who
+administer the dashboard (see [Authentication](docs/authentication.md)).
 
 ## Configuration
 
-Defaults come from [`default_inventory.yml`](default_inventory.yml). Keys that
-are absent or commented out there fall back to `default()` values in
-[`templates/values.yaml.j2`](templates/values.yaml.j2) and
-[`tasks/keycloak_sso.yml`](tasks/keycloak_sso.yml).
+The add-on reads `cividash.cividash.*` from the environment. Defaults are in
+[`default-environment.yaml.gotmpl`](default-environment.yaml.gotmpl).
 
-| Key (`inv_addons.cividash.*`) | Default | Notes |
+| Key (`cividash.cividash.*`) | Default | Notes |
 | --- | --- | --- |
-| `enable` | `true` | Enable the add-on |
-| `ns_create` / `ns_name` | `true` / `{{ ENVIRONMENT }}-cividash-stack` | Namespace |
-| `ns_kubeconfig` | `{{ kubeconfig_file \| default('kubeconfig') }}` | Kubeconfig used for the namespace/Helm tasks |
-| `enable_ingress` | `true` | Render the `cividash-public` Ingress. Class from `inv_k8s.ingress_class`, default `traefik` |
-| `register_apisix_route` | `true` | Register the open APISIX route, independent of `enable_ingress` and `gateway_api`; `false` disables it |
-| `public_host` / `admin_host` | `dashboard.{{ DOMAIN }}` / `dashboard.{{ DOMAIN }}` | Public hostname(s). `public_host` is required when `enable_ingress`, `gateway_api.enabled` or `register_apisix_route` is true |
-| `oidc_client_id` | `cividash` | Keycloak client id |
-| `ngsi_ld_roles` | `["dataConsumer", "dataProducer"]` | NGSI-LD client roles granted to the shared `api-access` service account — see [Authentication](docs/authentication.md) |
-| `ngsi_ld_scope` | `api:read api:write` | OAuth scope requested for the NGSI-LD machine token — see [Authentication](docs/authentication.md) |
-| `m2m_preflight_enabled` | `true` | Deploy-time check that the M2M token works — see [Authentication](docs/authentication.md) |
-| `keycloak_base_url_internal` | in-cluster Keycloak service | Override if the SSO token exchange needs a different internal endpoint — see [Troubleshooting](docs/troubleshooting.md) |
-| `replicas.{web,fpm,queue}` | `2` / `2` / `1` | Deployment replica counts (the scheduler always runs once) |
-| `log_level` / `log_channel` | `info` / `stderr` | Production hardening, override only to loosen for debugging |
-| `session_secure_cookie` | `true` | Production hardening |
-| `db.central` | `false` | `true`: create the database and its role in the central CORE Postgres (`central-db`) and read the credentials from there; `db.host`/`db.password` are then not needed — see [Database](docs/database.md) |
-| `db.host` | — | External PostgreSQL host, **required** unless `db.central`, vaulted |
-| `db.port` / `db.database` / `db.username` | `5432` / `cividash` / `cividash` | Optional overrides |
-| `db.password` | — | **Required** unless `db.central`, vaulted |
-| `civitas_api_url` | `https://api.{{ DOMAIN }}` | CIVITAS API base URL |
-| `storage` | `s3` | Where uploaded media live: `s3` (bucket) or `volume` (PersistentVolumeClaim on `inv_k8s.storage_class.rwx`) — see [Media storage](docs/storage.md) |
-| `volume.size` / `volume.access_mode` | `5Gi` / `ReadWriteMany` | Claim size and access mode with `storage: volume` |
-| `s3.{endpoint,bucket,region}` | see `default_inventory.yml` | S3 media storage. Use a bucket for CiviDash media only; it can stay private |
-| `s3.public_url` | `""` | Empty: media is served by the dashboard under `/storage`. A bucket URL makes browsers load media from the bucket directly, which needs anonymous read on it |
-| `s3.existing_secret` | `""` | Name of a Secret you create in the add-on namespace with the keys `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`; replaces the two keys below — see [Media storage](docs/storage.md#credentials-from-your-own-secret) |
-| `s3.access_key_id` / `s3.secret_access_key` | — | **Required** with `storage: s3` unless `s3.existing_secret` is set, vaulted |
-| `s3.use_path_style` | `true` | Path-style S3 URLs (`AWS_USE_PATH_STYLE_ENDPOINT`), needed for MinIO and most self-hosted S3 |
-| `seed.*` | see [Initial config data](docs/seed.md) | Initial data seeding |
-| `gateway_api.{enabled,parentRefs}` | `false` / — | Render a Gateway API `HTTPRoute` alongside the Ingress. `enable_ingress: false` gives `HTTPRoute`-only routing — see [Helm chart, Routing](docs/helm-chart.md#routing) |
-| `images.{app,web}.{registry,repository,tag}` | see `vars/software_references.yml` | Optional per-image override of the default image, e.g. for a mirror or a different tag — see [Helm chart, Images](docs/helm-chart.md#images) |
-| `image_pull_policy` | `Always` | `imagePullPolicy` for the app and web images |
-| `image_pull_secret` | `""` | Name of an existing pull Secret, needed for private registries |
-| `helm_values` | — | Recursive override merged on top of the rendered chart values, e.g. `ingress.annotations` for Ingress annotations such as a Traefik entrypoint or redirect Middleware |
+| `enabled` | `true` | Deploy the component |
+| `namespace` | `<instanceSlug>-cividash` | From `civitas.namespace`, like the core components |
+| `subdomain` | `dashboard` | Public host `<subdomain>.<global.domain>`. The Keycloak client in `keycloak-clients.yaml` is fixed to `dashboard`; with another subdomain, admin login through Keycloak needs a matching change there |
+| `storage` | `volume` | `volume`: a PersistentVolumeClaim shared by all CiviDash pods; with more than one node it needs a ReadWriteMany class (`global.storage.storageClass.rwx`). `s3`: an S3-compatible bucket, recommended for production. See [Media storage](docs/storage.md) |
+| `s3.existingSecret` | `""` | **Required** with `storage: s3`: Secret in the CiviDash namespace with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` |
+| `s3.endpoint` / `s3.bucket` | `""` | **Required** with `storage: s3` |
+| `s3.publicUrl` | `""` | Empty serves media through the dashboard under `/storage`; a bucket URL makes browsers load media from the bucket, which needs anonymous read |
+| `s3.region` / `s3.usePathStyle` | `us-east-1` / `true` | Path-style URLs suit MinIO and most self-hosted S3 |
+| `rawValues` | — | Chart values merged last, e.g. `seed.*` ([Initial config data](docs/seed.md)), `resources.*` or `ingress.annotations` |
 
-The optional controller-side database check in `tasks/database.yml` is
-controlled by two top-level variables (not under `inv_addons.cividash`):
-`cividash_db_readiness_check` (default `false`) and
-`cividash_db_readiness_timeout` (default `60` seconds). See
-[Database](docs/database.md).
-
-### Required vaulted keys
-
-The following keys have no default and **must** be supplied via your (vaulted)
-platform inventory. The deploy asserts their presence and fails fast otherwise:
-
-- `inv_addons.cividash.db.host` — PostgreSQL hostname, rendered into
-  `cividash-db-secret` as `DB_HOST`. Not needed with `db.central: true`.
-- `inv_addons.cividash.db.password` — PostgreSQL password, rendered into
-  `cividash-db-secret` as `DB_PASSWORD`. Not needed with `db.central: true`.
-- `inv_addons.cividash.s3.access_key_id` — S3 access key, rendered into
-  `cividash-app-secret` as `AWS_ACCESS_KEY_ID`. Not needed with `storage: volume`
-  or `s3.existing_secret`.
-- `inv_addons.cividash.s3.secret_access_key` — S3 secret key, rendered into
-  `cividash-app-secret` as `AWS_SECRET_ACCESS_KEY`. Not needed with `storage: volume`
-  or `s3.existing_secret`.
+The deployment fails at render time with a clear message when a required
+value is missing.
 
 ## What it deploys
 
-Into the namespace `{{ ENVIRONMENT }}-cividash-stack`. The add-on runs no
-database server. With `db.central: true` it registers a database in the
-central CORE Postgres; otherwise it connects to an externally provisioned
-PostgreSQL (see [Database](docs/database.md)).
+| File | Effect |
+| --- | --- |
+| [`keycloak-clients.yaml`](keycloak-clients.yaml) | Confidential client `cividash` for the admin login, roles `admin` and `editor`, mapped to the `groups` claim. CORE generates its secret as Secret `keycloak-client-cividash` |
+| [`databases.yaml`](databases.yaml) | Database and role `cividash` in the platform's PostgreSQL (CloudNativePG) |
+| [`secrets.yaml`](secrets.yaml) | `cividash-app-key` (Laravel `APP_KEY`) and `db-cividash` (database password, also copied to the postgres namespace) |
+| [`networkpolicies.yaml`](networkpolicies.yaml), [`networkpolicies-linkerd.yaml`](networkpolicies-linkerd.yaml) | On top of CORE's default deny: `cividash-web` from anywhere on 8080 (the Ingress controller), `cividash-fpm` only from `cividash-web`, PostgreSQL from the CiviDash pods |
+| [`policy-exceptions.yaml`](policy-exceptions.yaml) | The scheduler runs exactly once (no second replica, no rolling update) |
+| [`charts/cividash`](charts/cividash/) | The release `cividash-cividash` below |
 
 | Object | Kind | Notes |
 | --- | --- | --- |
-| `cividash-db-secret` | Secret (Helm hook) | External-Postgres connection; `pre-install,pre-upgrade`, weight `0` |
-| `cividash-app-secret` | Secret (Helm hook) | `APP_KEY` (idempotent) + app env; `pre-install,pre-upgrade`, weight `0` |
-| `cividash-oidc-secret` | Secret | Keycloak client id + secret, written by the SSO task (not part of the chart — see [Authentication](docs/authentication.md)) |
+| `cividash-app-secret`, `cividash-db-secret` | Secret (Helm hook) | App and connection settings without credentials; `pre-install,pre-upgrade`, weight `0` |
 | `cividash-migrate` | Job (Helm hook) | `php artisan migrate --force`; `pre-install,pre-upgrade`, weight `5` |
-| `cividash-seed` | Job (Helm hook) | Initial config data; `post-install,post-upgrade`, weight `10` — see [Initial config data](docs/seed.md) |
-| `cividash-fpm` | Deployment + Service (9000) | php-fpm, the full Laravel/Filament app |
-| `cividash-web` | Deployment + Service (80 -> 8080) | rootless nginx (uid 101) + baked public assets |
+| `cividash-seed` | Job (Helm hook) | Initial config data; `post-install,post-upgrade`, weight `10`, see [Initial config data](docs/seed.md) |
+| `cividash-fpm` | Deployment + Service (9000) | php-fpm, the Laravel/Filament app |
+| `cividash-web` | Deployment + Service (80 -> 8080) | rootless nginx with the public assets |
 | `cividash-queue` | Deployment | `php artisan queue:work` |
-| `cividash-scheduler` | Deployment | loops `php artisan schedule:run` every 60s |
-| `cividash-public` | Ingress and/or Gateway API `HTTPRoute` | Ingress when `enable_ingress` (class `traefik` by default), `HTTPRoute` when `gateway_api.enabled` (independent); `public_host` -> `cividash-web` |
-| APISIX upstream + route | APISIX Admin API | when `register_apisix_route`; open route `public_host` `/*` -> `cividash-web` (see [Authentication](docs/authentication.md)) |
+| `cividash-scheduler` | Deployment | `php artisan schedule:run` every 60 s, always one replica |
+| `cividash-public` | Ingress | `<subdomain>.<global.domain>` -> `cividash-web`, class and cluster issuer from `global.ingress` |
+| `cividash-web` | Linkerd `Server` | With Linkerd: lets the Ingress controller reach `cividash-web` (`global.serviceMesh.allowUnauthenticatedIngress`) |
+| `cividash-fpm`, `cividash-web` | PodDisruptionBudget | Profile `production` only |
+| `cividash-platform-ca` | ConfigMap | With the self-signed platform CA: PHP trusts `custom-ca-cert` next to the system CAs |
+| `cividash-public-media` | PersistentVolumeClaim | `storage: volume` only |
 
-All pods run with a hardened security context (`runAsNonRoot`,
-`seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`, `readOnlyRootFilesystem: true`; the paths the
-app and nginx write to are pod-local `emptyDir` volumes). Optional
-NetworkPolicies (chart value `networkPolicy`, off by default, set it through
-`helm_values`) let only the listed sources reach `cividash-web` and only
-`cividash-web` reach `cividash-fpm`. Media is stored on S3 (`PUBLIC_DISK_DRIVER=s3`) or, with `storage: volume`,
-on the claim `cividash-public-media` (`PUBLIC_DISK_DRIVER=local`);
-sessions, cache and queue use the database; logs go to stderr. Images are
-built by the CiviDash main repository — see [Helm chart, Images](docs/helm-chart.md#images).
+CiviDash is reached through its own Ingress only; it registers no APISIX
+route (the dashboard is public, the admin area authenticates in the app,
+and APISIX's fixed 6-second upstream timeout would cut off imports and
+exports). All credentials come from Secrets (`secretKeyRef`), never from Helm
+values. All containers run as non-root with a read-only root filesystem,
+`seccompProfile: RuntimeDefault`, no privilege escalation and all
+capabilities dropped; the paths the app and nginx write to are pod-local
+`emptyDir` volumes.
+
+Profile `production` runs `cividash-fpm`, `cividash-web` and
+`cividash-queue` with two replicas each and PodDisruptionBudgets; profile
+`development` runs one of each.
+
+### Not yet available on CIVITAS/CORE 2
+
+- **Data sync from the platform (NGSI-LD):** CORE 2 has no NGSI-LD broker
+  yet, so the sync is off (`civitas.enabled: false`). Dashboards are
+  maintained in the admin area or imported. How an add-on's own Keycloak
+  client gets access to platform datasets is still open on the CORE side.
+- **Admin login through Keycloak:** CORE 2 requires PKCE for confidential
+  clients. The client `cividash` is registered, but the login button stays
+  off (`keycloak.enabled: false`) until the CiviDash release in
+  [`images.yaml`](images.yaml) sends PKCE; until then admins sign in with a
+  CiviDash account.
 
 ## Versioning and compatibility
 
-The add-on's major and minor version (`chart/cividash/Chart.yaml`) follow the
-CORE minor version it targets: add-on `1.8.x` targets CORE `1.8.x` and also
-supports CORE `1.7.2` up to the `1.8.x` line. The table below names the exact
-CORE release it is tested on. The patch digit is independent. Breaking changes to the inventory structure are
-documented in `CHANGELOG.md`.
+The add-on's major and minor version (`charts/cividash/Chart.yaml`) follow the
+CORE version it targets: add-on `2.0.x` targets CORE `2.0.x`. The patch digit
+is independent. Breaking changes are documented in `CHANGELOG.md`.
 
 | Component | Version |
 | --- | --- |
-| cividash add-on (this repo/chart) | 1.8.3 |
-| CIVITAS/CORE platform | 1.7.2 – 1.8.x (tested on 1.8.2); NGSI-LD sync within 1.8.x only from 1.8.2, see below |
-| CiviDash app image (`cividash_app`/`cividash_web`) | release tag `1.2.1`, `linux/amd64` and `linux/arm64` |
-| Helm | >= 3.14 |
+| cividash add-on (this branch/chart) | 2.0.0 |
+| CIVITAS/CORE platform | 2.0.x (verified against 2.0.2) |
+| CiviDash app images | release tag `1.2.1` ([`images.yaml`](images.yaml)), `linux/amd64` and `linux/arm64` |
 | Kubernetes | >= 1.28 |
 
-Kubernetes >= 1.28 is the supported floor, not
-a floor derived from the chart's own API usage — `apps/v1`, `batch/v1` and
-`networking.k8s.io/v1 Ingress` only require Kubernetes >= 1.19. With
-`inv_addons.cividash.gateway_api.enabled: true` (chart value
-`gatewayApi.enabled`) the chart additionally needs Gateway API CRDs
->= v1.0 installed on the cluster, independent of the Kubernetes version.
+CI runs CORE's `verify-addon.sh` from the targeted CORE release against this
+repository (base and production policies) and additionally renders the
+add-on with profile `production` and S3 storage (see
+[`.github/workflows/verify.yml`](.github/workflows/verify.yml)). To run the
+same check locally with helmfile, helm, yq and the Kyverno CLI installed:
 
-Installations on CORE 1.6.x stay on add-on `1.6.x`. Before upgrading to
-1.8.x, read the Breaking section of the 1.8.0 entry in `CHANGELOG.md`
-(Traefik as default ingress class, the separate APISIX route switch,
-`open_http_port`) and the operator steps for `api-access` in
-[Authentication](docs/authentication.md#operator-prerequisites-m2m--api-access).
-During the upgrade from CiviDash 1.0.x to 1.1.0, new `cividash-web` pods can
-serve the 1.1.0 frontend while old `cividash-fpm` pods still run 1.0.x, which
-has no `/api/v1` routes. Dashboards opened in that window of the rollout may
-fail to load data until the page is reloaded; plan the upgrade outside peak
-hours.
+```bash
+git clone --depth 1 --branch v2.0.2 https://gitlab.com/civitas-connect/civitas-core/civitas-core-v2/civitas-core-deployment.git /tmp/core
+/tmp/core/.ci/policies/verify-addon.sh . --env local
+/tmp/core/.ci/policies/verify-addon.sh . --env production
+.github/scripts/verify-production-profile.sh /tmp/core .
+```
 
-Media on S3: images up to CiviDash 1.1.2 stored objects under the container path
-(`var/www/html/storage/app/public/…`) and needed a bucket with anonymous read.
-From CiviDash 1.1.3, objects sit at the bucket root and the dashboard
-serves them under `/storage`. When upgrading an installation that already has
-uploads, stop uploading media, then copy (do not move) the objects to the
-bucket root, stripping that prefix, so pods still on 1.1.2 keep finding them
-during the rollout. Check the copies, upgrade, and delete the prefixed objects
-only once all pods run 1.1.3. Alternatively, upload the media again. While
-old `cividash-web` pods still serve requests next to new `cividash-fpm` pods,
-media under `/storage` can fail to load until the rollout completes. Re-import
-theme bundles, and leave `s3.public_url` empty unless the bucket stays public
-on purpose.
+Pass `--env` explicitly: without it, `verify-addon.sh` 2.0.2 reports success
+even when the add-on fails to render.
 
-`cc_cli validate` rejects `inv_addons.cividash` ("Additional properties are not
-allowed"), because the CORE inventory schema (`InvAddons` in
-`core_platform/inventory_schema.json`, CORE 1.6 to 1.8) only allows `import`
-and `addons`. The platform playbook merges and uses the keys as intended;
-validate the inventory without the `cividash` block, or skip `cc_cli validate`
-for it.
+**Migrating from CIVITAS/CORE 1:** CORE 2 has no in-place upgrade. Before the
+first deployment, create the Secret `cividash-app-key` (key `app-key`) in the
+CiviDash namespace with the `APP_KEY` of the old installation, with the Helm
+ownership metadata described in [Helm chart, APP_KEY](docs/helm-chart.md#app_key),
+then restore a
+dump of the old database into the new `cividash` database and copy the media
+(bucket or volume). Sessions, cache and queue live in the database and move
+with it.
 
-NGSI-LD sync needs CORE 1.8.2 or later within 1.8.x. CORE 1.8.0 and 1.8.1
-reject the add-on's machine token at the APISIX introspection of the Stellio
-routes (`invalid_client`); the CORE 1.8.2 playbook fixes these routes in place.
-
-A platform with a private CA (`inv_k8s.ingress.ca_path` set, as in CORE's local
-k3d setup) needs no extra step: the add-on passes that CA to the chart
-(`platformCa`), and the PHP pods trust it next to the system CAs when they call
-Keycloak and APISIX.
-
-Do not change the Deployments with `kubectl set image` or similar. Helm 4
-applies server-side and stops the next upgrade with a field conflict on the
-changed field; change images through the inventory instead.
-
-**Cutting a release:** tag this repo `v1.8.x` and publish a GitHub release for
-the tag. Publishing runs the `Release SBOM` workflow, which attaches the image
-SBOMs; a pushed tag alone does not. If it did not run, start it by hand with
-the tag. Images are pinned to an
-immutable CiviDash release tag in
-[`vars/software_references.yml`](vars/software_references.yml), corresponding
-to CiviDash 1.2.1. Never reference the moving `civitas` tag from an add-on
-release or an inventory.
+**Cutting a release:** tag the `v2` branch `v2.0.x` and publish a GitHub
+release for the tag. Publishing runs the `Release SBOM` workflow, which
+attaches the image SBOMs of the images pinned in [`images.yaml`](images.yaml).
 
 ## Uninstall
 
-`helm uninstall cividash --namespace <ns>` removes the Deployments, Services,
-Ingress/`HTTPRoute` and the Helm hook Jobs — but not everything the add-on
-created:
+```bash
+helmfile -f deployment/helmfile-instance.yaml.gotmpl destroy -e <env> --selector component=cividash
+```
 
-- **Hook Secrets** (`cividash-app-secret`, `cividash-db-secret`) are not part
-  of the Helm release manifest and survive `helm uninstall`.
-  `cividash-oidc-secret`, written by `tasks/keycloak_sso.yml` rather than by
-  Helm, is never removed by Helm either. Delete all three explicitly:
-  `kubectl -n <ns> delete secret cividash-app-secret cividash-db-secret cividash-oidc-secret`.
-- **Keycloak client** (`cividash`) and its `admin`/`editor` roles, registered
-  by `tasks/keycloak_sso.yml`, are outside Helm's scope. Delete them via the
-  Keycloak admin console/API.
-- **APISIX upstream + route**, registered by `tasks/apisix.yml`, are likewise
-  outside Helm's scope. Remove them via the APISIX Admin API.
-- **S3 media** (`PUBLIC_DISK_DRIVER=s3`) is untouched by uninstall; the
-  bucket and its objects remain and must be cleaned up separately.
-- **PVC** `cividash-public-media` (only with `storage: volume`) is kept by
-  Helm (`helm.sh/resource-policy: keep`) together with the media on it.
-  Delete it explicitly: `kubectl -n <ns> delete pvc cividash-public-media`.
-  CORE's own uninstall deletes the whole namespace and the media with it; see
-  [Media storage](docs/storage.md#uninstall).
+Then remove `cividash` from the `components` list and the submodule. Left
+behind:
+
+- **Hook Secrets** `cividash-app-secret` and `cividash-db-secret`, which are
+  not part of the Helm release manifest.
+- **Generated Secrets** `cividash-app-key`, `db-cividash` and
+  `keycloak-client-cividash`, the Keycloak client `cividash` and the
+  database `cividash`, which belong to the platform's secrets, Keycloak and
+  postgres components.
+- **Media**: the S3 bucket, or the PVC `cividash-public-media`
+  (`helm.sh/resource-policy: keep`).
 
 ## Documentation
 
-- [Helm chart](docs/helm-chart.md) — installation wrapper, values, routing, verifying the chart locally, images
-- [Authentication](docs/authentication.md) — admin auth, the NGSI-LD machine token, operator prerequisites
-- [Database](docs/database.md) — central CORE Postgres or external PostgreSQL
-- [Media storage](docs/storage.md) — S3 bucket or volume, access modes, backup, switching
-- [Initial config data](docs/seed.md) — the `cividash-seed` hook Job
+- [Helm chart](docs/helm-chart.md): values, routing, verifying the chart locally, images
+- [Authentication](docs/authentication.md): admin login through Keycloak
+- [Database](docs/database.md): the platform's PostgreSQL
+- [Media storage](docs/storage.md): S3 bucket or volume, backup, switching
+- [Initial config data](docs/seed.md): the `cividash-seed` hook Job
 - [Troubleshooting](docs/troubleshooting.md)
-- [Components](docs/components.md) — what a deployment consists of, and the image SBOMs attached to each release
+- [Components](docs/components.md): what a deployment consists of, and the image SBOMs attached to each release
 - [Conformance with the CORE add-on guideline](docs/core-guideline-conformance.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 

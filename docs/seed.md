@@ -1,40 +1,60 @@
 # Initial config data (`cividash-seed`)
 
-`chart/cividash/templates/cividash-seed.yaml` is a Helm hook Job
-(`post-install,post-upgrade`, weight `10`, after `cividash-migrate` and the
-workloads created by the same `helm upgrade --install`), per guideline:
-"initial loading of configuration data" via an add-on-local step after
-deployment. A Job, not an init script. Gated by `seed.enabled`
-(default `true`, `inv_addons.cividash.seed.enabled`). Steps, all
-idempotent and run on every install/upgrade; step 3 resets edited pages
-(see there):
+[`charts/cividash/templates/cividash-seed.yaml`](../charts/cividash/templates/cividash-seed.yaml)
+is a Helm hook Job (`post-install,post-upgrade`, weight `10`). It runs after
+`cividash-migrate` and after the workloads of the same release are created,
+and it runs again on every upgrade. Configuration that the application only
+accepts at runtime is loaded here, in a Job, not in commands executed in a
+running pod. It is on by default (`seed.enabled: true`).
 
-1. `php artisan tenancy:backfill --default-tenant={{ seed.defaultTenant }}` —
-   creates the tenant only if it doesn't exist yet (`Tenant::firstOrCreate`,
-   CiviDash main repo `app/Console/Commands/TenancyBackfillCommand.php`).
-2. When `seed.setTenantDomain` (default `true`): sets the default tenant's
-   `domain` to `app.publicHost` via `php artisan tinker`, only when
-   `app.publicHost` is set and the domain differs — there is no dedicated
+Steps, all idempotent; step 3 resets edited pages (see there):
+
+1. `php artisan tenancy:backfill --default-tenant=<seed.defaultTenant>`
+   creates the tenant only if it does not exist yet (`Tenant::firstOrCreate`,
+   CiviDash main repository `app/Console/Commands/TenancyBackfillCommand.php`).
+2. With `seed.setTenantDomain` (default `true`): sets the default tenant's
+   `domain` to `app.publicHost` (`<subdomain>.<global.domain>`) through
+   `php artisan tinker`, only when the domain differs. There is no dedicated
    artisan command for this.
-3. When `seed.pages` (default `false`): `php artisan pages:seed`. Idempotent:
-   `PageSeeder` finds-or-creates per DE
-   slug and only updates changed fields, `NavigationSeeder` skips once header
-   navigation items exist. Changed fields include edits made in the admin
-   panel: a page with a seeded slug is reset on every run. Turn `seed.pages`
-   off again after the first seed.
-4. When `seed.dashboardJsonUrl` is non-empty (default empty): `php artisan
-   dashboard:seed --url=...`. Idempotent:
-   `CategorySeeder`/`TileSeeder` find-or-create per slug/title and only
-   update changed fields; `MetricSeeder` documents idempotent upserts.
+3. With `seed.pages` (default `false`): `php artisan pages:seed`. `PageSeeder`
+   finds or creates each page by its German slug and only updates changed
+   fields; `NavigationSeeder` skips once header navigation items exist.
+   Changed fields include edits made in the admin area: a page with a seeded
+   slug is reset on every run. Turn `seed.pages` off again after the first
+   seed.
+4. With a non-empty `seed.dashboardJsonUrl` (default empty):
+   `php artisan dashboard:seed --url=...`. `CategorySeeder` and `TileSeeder`
+   find or create by slug or title and only update changed fields;
+   `MetricSeeder` upserts.
 
-Values: `inv_addons.cividash.seed.{enabled,default_tenant,set_tenant_domain,pages,dashboard_json_url}`
-(see [`default_inventory.yml`](../default_inventory.yml)).
+## Configuration
 
-**`seed.pages` / `seed.dashboardJsonUrl` require `seed.defaultTenant: default`.**
-Both seeders operate on a hardcoded `"default"` tenant slug elsewhere in the
-CiviDash main repo (`BelongsToTenant`'s creating-hook falls back to
-`Tenant::where('slug', 'default')`; `DashboardSeedCommand`'s tile-branding
-fallback chain does the same, and its own `--tenant` option is never read).
-With a different `seed.defaultTenant` and no `default` tenant, the Job would
-fail; with one present, content would land in the wrong tenant. The chart
-enforces this with a `fail` guard at render time.
+The seed settings are chart values. Set them through `rawValues` in the
+environment:
+
+```yaml
+cividash:
+  cividash:
+    rawValues:
+      seed:
+        pages: true
+        dashboardJsonUrl: https://example.org/dashboard.json
+```
+
+| Chart value | Default |
+| --- | --- |
+| `seed.enabled` | `true` |
+| `seed.defaultTenant` | `default` |
+| `seed.setTenantDomain` | `true` |
+| `seed.pages` | `false` |
+| `seed.dashboardJsonUrl` | `""` |
+
+## `seed.pages` and `seed.dashboardJsonUrl` require `seed.defaultTenant: default`
+
+Both seeders use a hardcoded `default` tenant slug in the CiviDash main
+repository (`BelongsToTenant`'s creating hook falls back to
+`Tenant::where('slug', 'default')`; the tile branding fallback of
+`DashboardSeedCommand` does the same, and its own `--tenant` option is never
+read). With another `seed.defaultTenant` and no `default` tenant, the Job
+would fail; with one present, content would land in the wrong tenant. The
+chart refuses to render this combination.

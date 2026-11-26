@@ -1,19 +1,53 @@
-# Conformance with the CORE add-on guideline (v1, 2026-09-02)
+# Conformance with the CIVITAS/CORE 2 add-on guideline
 
-| Guideline item | Status | Where |
+Status against the checklist of the CIVITAS/CORE 2 add-on development guide
+and the deployment requirements, for CORE 2.0.2.
+
+## Add-on checklist
+
+| Checklist item | Status | Where |
 | --- | --- | --- |
-| Own repo + Copier template | done | This repo; `.copier-answers.yml` |
-| `tasks.yml` entry point + `addons`/`addon_<name>` tags | done | [`tasks.yml`](../tasks.yml) |
-| Own Kubernetes namespace | done | `inv_addons.cividash.ns_create`/`ns_name`, see [`default_inventory.yml`](../default_inventory.yml) |
-| Helm via central platform task, metadata in `software_references.yml` | done | [`tasks/cividash.yml`](../tasks/cividash.yml), [`vars/software_references.yml`](../vars/software_references.yml) — see [Helm chart](helm-chart.md) |
-| Execution after core platform tasks | done | Platform-controlled; not a parameter this add-on exposes (per guideline) |
-| No root | done | All workloads using the `cividash-app` image (`cividash-fpm`, `cividash-queue`, `cividash-scheduler`, `cividash-migrate`, `cividash-seed`) run as uid 82, `cividash-web` as uid 101 (`nginxinc/nginx-unprivileged`, port 8080); all pods `runAsNonRoot: true`, `capabilities.drop: [ALL]` without additions |
-| Routing: APISIX or Ingress (+ Gateway API) | done | APISIX open route ([`tasks/apisix.yml`](../tasks/apisix.yml)) (`register_apisix_route`) plus `Ingress` (Traefik by default)/`HTTPRoute` (`ingress.enabled`/`gatewayApi.enabled`) — see [Helm chart, Routing](helm-chart.md#routing) |
-| Keycloak 6-step pattern | done | [`tasks/keycloak_sso.yml`](../tasks/keycloak_sso.yml) — see [Authentication](authentication.md) |
-| Dedicated Postgres | done | Database in the central CORE Postgres (`db.central`) or external, operator-provisioned — see [Database](database.md) |
-| Initial config data | done | `cividash-seed` Helm hook Job — see [Initial config data](seed.md) |
-| Versioning (add-on minor follows CORE minor, patch free) | done | See README, "Versioning and compatibility" |
-| Breaking changes documented | done | See [`CHANGELOG.md`](../CHANGELOG.md) |
-| Mandatory artefacts: `tasks.yml`, `default_inventory.yml`, `software_references.yml`, `README.md`, `LICENSE` | done | All present; `LICENSE` is EUPL-1.2 or later (SPDX `EUPL-1.2+`), matching the guideline's default licence EUPL-1.2 |
-| Hardened production defaults (log level/channel, debug off, secure session cookie) | done | `app.logLevel`/`app.logChannel`/`app.sessionSecureCookie` in [`values.yaml`](../chart/cividash/values.yaml), templated from `inv_addons.cividash.log_level`/`log_channel`/`session_secure_cookie` — see [`default_inventory.yml`](../default_inventory.yml) |
-| `readOnlyRootFilesystem` | done | Set on every container. The PHP workloads write to `storage/`, `bootstrap/cache` and `/tmp`, `cividash-web` (nginx-unprivileged) to `/tmp` and `/etc/nginx/conf.d` (filled in at start by the image); each of these is a pod-local `emptyDir`, see [`_helpers.tpl`](../chart/cividash/templates/_helpers.tpl). The rendered chart passes the base Kyverno policies of CIVITAS/CORE 2. |
+| Repository root contains the component files; directory name, `components` entry and `component` match | Met | Component files at the root; `component: cividash` in [`civitas-component.yaml`](../civitas-component.yaml); checked out as `deployment/addons/cividash` (README, Quick start) |
+| `helmfile.yaml.gotmpl` uses the `../../../defaults/helm-defaults.yaml` base path | Met | [`helmfile.yaml.gotmpl`](../helmfile.yaml.gotmpl) |
+| Charts and images pinned in `charts.yaml` and `images.yaml`; Renovate configured | Met | Local chart in [`charts.yaml`](../charts.yaml) (no version needed); release tag `1.2.1` in [`images.yaml`](../images.yaml); [`renovate.json`](../renovate.json) tracks `images.yaml` |
+| `default-environment.yaml.gotmpl` contains only operator-facing settings | Met | `enabled`, `namespace`, `subdomain`, `storage`, `s3.*` in [`default-environment.yaml.gotmpl`](../default-environment.yaml.gotmpl); everything else is a default in the values files, overridable through `rawValues` |
+| Values split into base, development and production; requirement checklist completed | Met | [`values/cividash/`](../values/cividash/), checklist comments at the top of each file |
+| Keycloak clients, routes, secrets and databases declared, not created by scripts | Met | [`keycloak-clients.yaml`](../keycloak-clients.yaml), [`secrets.yaml`](../secrets.yaml), [`databases.yaml`](../databases.yaml); no routes. No scripts or Helmfile hooks |
+| Own databases hold application data only; payload data is modeled as Datasets | Partly | The `cividash` database holds the dashboards' configuration, content, users, sessions, cache and queue. While the NGSI-LD sync is off, the key figure values shown on the dashboards are also entered or imported there. Moving them to platform Datasets depends on NGSI-LD in CORE 2 and on dataset access for add-on clients, see [Authentication, NGSI-LD data sync](authentication.md#ngsi-ld-data-sync) |
+| No changes to shared Keycloak clients or realm settings required | Met | Only the add-on's own client `cividash`; it has no service account |
+| Every route has a matching plugin entry; protected routes validate through `apisix-validator` | Not applicable | No APISIX routes; access through the add-on's own Ingress, see [Helm chart, Routing](helm-chart.md#routing) |
+| Credentials that cannot be generated are referenced as operator-created Secrets | Met | S3 keys from the Secret named in `s3.existingSecret`, see [Media storage](storage.md#storage-s3). All other credentials are generated by CORE; the chart reads every credential through `secretKeyRef` |
+| Network policies for all inbound traffic, including the Linkerd variant | Met | [`networkpolicies.yaml`](../networkpolicies.yaml), [`networkpolicies-linkerd.yaml`](../networkpolicies-linkerd.yaml): `cividash-web`, `cividash-fpm`, and PostgreSQL for the CiviDash pods |
+| Kyverno verification passes in CI; exceptions documented | Met | [`.github/workflows/verify.yml`](../.github/workflows/verify.yml) runs CORE's `verify-addon.sh` (`local`, `production`) and a render with profile `production`; the one exception is in [`policy-exceptions.yaml`](../policy-exceptions.yaml), see [below](#scheduler-singleton) |
+| README documents prerequisites, configuration and backup of own data stores | Met | README (Quick start, Configuration, Uninstall); backup in [Database](database.md#backup-and-restore) and [Media storage](storage.md#backup) |
+
+## Deployment requirements
+
+| Requirement | Status | Where |
+| --- | --- | --- |
+| Pinned images | Met | Immutable CiviDash release tag from `images.yaml`, `pullPolicy: IfNotPresent`. The chart's own default tag `civitas` is never deployed by the add-on |
+| Resources | Met | Requests and limits for every container and init container (`resources.*` in [`values.yaml`](../charts/cividash/values.yaml)) |
+| Replicas in production | Met, with one exception | Profile `production`: 2 replicas of `cividash-fpm`, `cividash-web` and `cividash-queue`; `cividash-scheduler` runs once |
+| PodDisruptionBudget in production | Met | `minAvailable: 1` for `cividash-fpm` and `cividash-web` ([`pdb.yaml`](../charts/cividash/templates/pdb.yaml)), enabled by the production values |
+| Rolling update | Met, with one exception | `maxUnavailable: 0`, `maxSurge: 1` on fpm, web and queue; the scheduler uses `Recreate` |
+| Non-root | Met | PHP containers uid/gid 82, `cividash-web` uid 101 (nginx-unprivileged, port 8080); `runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, `seccompProfile: RuntimeDefault` on every pod. The chart sets these values itself rather than reading `securityDefaults`, because the images need their own uids |
+| Read-only root filesystem | Met | Every container and init container. Writable paths (`storage/`, `bootstrap/cache`, `/tmp`, nginx's `conf.d`) are pod-local `emptyDir` volumes, see [Helm chart, Workloads](helm-chart.md#workloads) |
+| Secrets | Met | No credential in values or ConfigMaps, see [Helm chart, Credentials](helm-chart.md#credentials) |
+| ServiceAccount with least privilege | Met | No Kubernetes API access needed; `automountServiceAccountToken: false` on every pod |
+| Network policies | Met | See the checklist above. The chart's own `networkPolicy` option stays off |
+| Probes | Met | fpm: TCP readiness and liveness on 9000. web: readiness `GET /up`, TCP liveness on 8080. queue: liveness checks the worker process. scheduler: liveness checks a heartbeat file touched after each `schedule:run`. Queue and scheduler serve no traffic and have no readiness probe |
+| Graceful shutdown | Met | `preStop` `sleep 10` on fpm and web, so endpoint removal reaches the ingress controller before the pod stops. Queue and scheduler stop within the default termination grace period |
+| Standard labels | Met | `app.kubernetes.io/name`, `instance`, `part-of`, `managed-by` and `helm.sh/chart` on every object |
+| Named ports | Met | `fastcgi` (9000) on fpm, `http` (8080 in the pod, 80 on the Service) on web |
+| Ingress with TLS | Met | `cividash-public` with class, cluster issuer and controller annotations from `global.ingress`, TLS for `<subdomain>.<global.domain>` |
+
+## Scheduler singleton
+
+`cividash-scheduler` runs Laravel's `schedule:run` loop. It must run exactly
+once: a second replica, or a surge pod during a rolling update, would start
+every scheduled job twice. It therefore runs one replica with the `Recreate`
+strategy, and [`policy-exceptions.yaml`](../policy-exceptions.yaml) exempts
+this one Deployment from the production policies `require-minimum-replicas`
+and `require-rolling-update` (rule `require-rolling-update-deployment`).
+The pods that serve users (fpm, web) and the queue workers are not affected
+and run with two replicas in production.

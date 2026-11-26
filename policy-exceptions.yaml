@@ -1,0 +1,27 @@
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: cividash-scheduler-singleton
+  annotations:
+    reason: >-
+      cividash-scheduler runs Laravel's schedule:run loop, which must run
+      exactly once: a second replica, or a surge pod during a rolling update,
+      would start every scheduled job twice. It therefore runs one replica with
+      the Recreate strategy. The user-facing pods (fpm, web) and the queue
+      workers run with 2 replicas in production.
+spec:
+  exceptions:
+    - policyName: require-minimum-replicas
+      ruleNames:
+        - require-minimum-replicas
+    - policyName: require-rolling-update
+      ruleNames:
+        - require-rolling-update-deployment
+  match:
+    any:
+      - resources:
+          kinds:
+            - Deployment
+          names:
+            - cividash-scheduler

@@ -1,0 +1,38 @@
+---
+# Admin login (Socialite, authorization code flow). The client secret is
+# generated as Secret keycloak-client-cividash. Assign the client roles admin
+# and editor in the Keycloak admin console; the app reads them from the
+# "groups" claim.
+cividash:
+  name: CiviDash
+  description: CiviDash admin login
+  subdomain: dashboard
+  redirectPath: /admin/auth/keycloak/callback
+  roles:
+    - name: admin
+      description: Full access to the CiviDash admin area
+    - name: editor
+      description: Edits dashboard content in the CiviDash admin area
+  rawValues:
+    baseUrl: /admin
+    directAccessGrantsEnabled: false
+    protocolMappers:
+      - name: client-roles-as-groups
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-client-role-mapper
+        consentRequired: false
+        config:
+          multivalued: 'true'
+          userinfo.token.claim: 'true'
+          id.token.claim: 'true'
+          access.token.claim: 'true'
+          claim.name: groups
+          usermodel.clientRoleMapping.clientId: cividash
+      - name: cividash-audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.client.audience: cividash
+          access.token.claim: 'true'
+          id.token.claim: 'false'

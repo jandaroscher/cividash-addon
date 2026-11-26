@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2025-2026 JANDA+ROSCHER GmbH & Co. KG
+#
+# SPDX-License-Identifier: EUPL-1.2+
+
+# Checks the add-on against the CIVITAS/CORE 2 release it targets: the
+# reusable verify-addon.sh from the core repository (base and production
+# policies, one job per test environment, like CORE's own GitLab job), plus a
+# render with profile production, which verify-addon.sh does not cover.
+name: Verify
+
+on:
+  push:
+    branches: [v2]
+  pull_request:
+    branches: [v2]
+
+permissions:
+  contents: read
+
+env:
+  CORE_REPO_URL: https://gitlab.com/civitas-connect/civitas-core/civitas-core-v2/civitas-core-deployment.git
+  # CORE release this add-on version targets (see README).
+  CORE_REF: v2.0.2
+
+jobs:
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v3.22.0
+      - name: Helm lint
+        run: helm lint --strict charts/cividash -f charts/cividash/ci/smoke-values.yaml
+
+  core-policies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # CORE's CI image: helmfile, helm, yq, kyverno, bash and python3 in the
+    # versions verify-addon.sh is written for.
+    container:
+      image: registry.gitlab.com/civitas-connect/civitas-core/docker-images/cicd:2.1.0-beta@sha256:35708d22cbf916bea4a17314fb1a20ce1cde4fbdf8dbda4a7b118820b4615033
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [local, production, production-profile]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: addon
+      - name: Clone CIVITAS/CORE ${{ env.CORE_REF }}
+        run: git clone --depth 1 --branch "$CORE_REF" "$CORE_REPO_URL" core
+      - name: verify-addon.sh --env ${{ matrix.check }}
+        if: matrix.check != 'production-profile'
+        env:
+          ENVIRONMENT: ${{ matrix.check }}
+        run: core/.ci/policies/verify-addon.sh "$GITHUB_WORKSPACE/addon" --env "$ENVIRONMENT"
+      - name: Render with profile production
+        if: matrix.check == 'production-profile'
+        run: addon/.github/scripts/verify-production-profile.sh core addon
