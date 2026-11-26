@@ -18,11 +18,9 @@
 {{- fail (printf "cividash.cividash.storage must be \"s3\" or \"volume\", got %q" $this.storage) }}
 {{- end }}
 
+images:
 {{- range $name, $image := .Values.images.cividash }}
 {{- $parts := splitList "/" $image.repository }}
-{{- if eq $name "app" }}
-images:
-{{- end }}
   {{ $name }}:
     registry: {{ first $parts }}
     repository: {{ rest $parts | join "/" }}
@@ -40,7 +38,8 @@ app:
     existingSecret: {{ required "cividash.cividash.s3.existingSecret is required for storage: s3" $this.s3.existingSecret }}
     endpoint: {{ required "cividash.cividash.s3.endpoint is required for storage: s3" $this.s3.endpoint }}
     bucket: {{ required "cividash.cividash.s3.bucket is required for storage: s3" $this.s3.bucket }}
-    publicUrl: {{ required "cividash.cividash.s3.publicUrl is required for storage: s3" $this.s3.publicUrl }}
+    # Empty: media are served by the dashboard under /storage.
+    publicUrl: {{ $this.s3.publicUrl | default "" | quote }}
     region: {{ $this.s3.region }}
     usePathStyle: {{ $this.s3.usePathStyle }}
   {{- end }}
@@ -59,8 +58,11 @@ db:
     name: {{ .Values.databases.cividash.secret.name }}
     key: {{ .Values.databases.cividash.secret.key }}
 
+# The client is registered (keycloak-clients.yaml), but the login button stays
+# off: CORE 2 requires PKCE for confidential clients, and the CiviDash release
+# in images.yaml does not send it yet. Enable it once it does.
 keycloak:
-  enabled: true
+  enabled: false
   baseUrl: https://{{ $keycloakHost }}{{ $keycloakPath }}
   realm: {{ $global.instanceSlug }}
   clientId: cividash

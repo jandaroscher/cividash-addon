@@ -37,8 +37,7 @@ maintenance:
 dependsOn:
   open:
     - name: CIVITAS/CORE
-      versionMin: "1.7.2"
-      versionMax: "1.8.2"
+      versionMin: "2.0.2"
 
 localisation:
   localisationReady: false
@@ -51,29 +50,29 @@ description:
     shortDescription: "CIVITAS/CORE-Add-on für das CiviDash-Nachhaltigkeitsdashboard"
     longDescription: >
       Packt CiviDash, das Open-Source-Nachhaltigkeitsdashboard für Kommunen, als
-      CIVITAS/CORE-Add-on: eine Ansible-Rolle plus lokales Helm-Chart für die
-      Installation über den zentralen Plattform-Helm-Task, dazu Keycloak-SSO- und
-      APISIX-Gateway-Anbindung. Reine Deploy-Logik, der Anwendungscode liegt im
+      CIVITAS/CORE-2-Add-on: eine Helmfile-Komponente mit lokalem Helm-Chart, dazu
+      Keycloak-Client, Datenbank, Secrets und Network Policies über die
+      Konfigurationsdateien des Cores. Reine Deploy-Logik, der Anwendungscode liegt im
       CiviDash-Hauptrepository, das hier als vorgebaute Container-Images einfließt.
     features:
-      - Installation über den zentralen CIVITAS/CORE-Plattform-Helm-Task
-      - Keycloak-SSO für den Admin-Bereich über einen eigenen Keycloak-Client
-      - NGSI-LD-Maschinentoken über den gemeinsamen api-access-Client
-      - Anbindung an eine externe PostgreSQL-Datenbank und Medienspeicher auf S3 oder einem Kubernetes-Volume
+      - Installation als Helmfile-Komponente von CIVITAS/CORE 2
+      - Eigener Keycloak-Client mit den Rollen admin und editor
+      - Datenbank im Postgres-Cluster des Cores, Medienspeicher auf S3 oder einem Kubernetes-Volume
+      - Generierte Secrets, Network Policies und Linkerd-Anbindung
       - Idempotente Datenbankmigration und Erstbefüllung als Helm-Hook-Jobs
     documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"
   en:
     shortDescription: "CIVITAS/CORE add-on for the CiviDash sustainability dashboard"
     longDescription: >
       Packages CiviDash, the open-source sustainability dashboard for municipalities,
-      as a CIVITAS/CORE add-on: an Ansible role plus a local Helm chart installed
-      through the central platform Helm task, with Keycloak SSO and APISIX gateway
-      wiring. Deploy-only logic; the application code lives in the CiviDash main
+      as a CIVITAS/CORE 2 add-on: a Helmfile component with a local Helm chart,
+      plus a Keycloak client, database, secrets and network policies through the
+      core's configuration files. Deploy-only logic; the application code lives in the CiviDash main
       repository and ships here as prebuilt container images.
     features:
-      - Installs through the central CIVITAS/CORE platform Helm task
-      - Keycloak SSO for the admin area via a dedicated Keycloak client
-      - NGSI-LD machine token via the shared api-access client
-      - Connects to an external PostgreSQL database and stores media on S3 or a Kubernetes volume
+      - Installs as a CIVITAS/CORE 2 Helmfile component
+      - Dedicated Keycloak client with the roles admin and editor
+      - Database in the core's Postgres cluster, media on S3 or a Kubernetes volume
+      - Generated secrets, network policies and Linkerd integration
       - Idempotent database migration and initial data seed as Helm hook Jobs
     documentation: "https://github.com/jandaroscher/cividash-addon/blob/main/README.md"

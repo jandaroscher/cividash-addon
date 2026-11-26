@@ -34,7 +34,7 @@ The add-on's values set the other Keycloak settings of the chart:
 
 | Chart value | Source |
 | --- | --- |
-| `keycloak.enabled` | `true` |
+| `keycloak.enabled` | `false` until the pinned CiviDash release sends PKCE (see below); set `cividash.cividash.rawValues.keycloak.enabled: true` with such a release |
 | `keycloak.baseUrl` | `https://<keycloak.app.subdomain>.<global.domain><keycloak.app.pathPrefix>` |
 | `keycloak.realm` | `global.instanceSlug` |
 | `keycloak.clientId` | `cividash` |
@@ -65,9 +65,10 @@ A role change takes effect at the user's next Keycloak login.
 CORE 2 enables PKCE (`pkce.code.challenge.method: S256`) on every
 confidential client, including `cividash`. Keycloak then rejects an
 authorization request without a code challenge. The CiviDash release pinned
-in [`images.yaml`](../images.yaml) does not send PKCE yet, so Keycloak login
-to the admin area fails until a CiviDash release with PKCE support is
-pinned. Password login with local CiviDash accounts is not affected.
+in [`images.yaml`](../images.yaml) does not send PKCE yet, so the add-on
+registers the client but keeps the Keycloak login button off
+(`keycloak.enabled: false`). Admins sign in with local CiviDash accounts
+until a CiviDash release with PKCE support is pinned.
 
 ## NGSI-LD data sync
 

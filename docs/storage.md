@@ -22,7 +22,8 @@ unless `s3.publicUrl` points them at the bucket. Any other value of
 
 ## `storage: s3`
 
-The access keys never go into the environment or the Helm values. Create a
+The access keys never go into the Helm values: the PHP pods read them from
+the Secret as environment variables (`secretKeyRef`). Create a
 Secret in the CiviDash namespace (`<instanceSlug>-cividash`) with exactly
 these two keys before the deployment:
 
@@ -46,8 +47,8 @@ cividash:
 ```
 
 `existingSecret`, `endpoint` and `bucket` are required; the render fails
-with a message naming the missing key. `publicUrl` must be present but may
-be empty.
+with a message naming the missing key. `publicUrl` is optional; empty or
+unset serves media through the dashboard.
 
 The PHP pods read `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from that
 Secret through `secretKeyRef`. If the Secret is missing, the

@@ -75,7 +75,7 @@ The add-on reads `cividash.cividash.*` from the environment. Defaults are in
 | `storage` | `volume` | `volume`: a PersistentVolumeClaim shared by all CiviDash pods; with more than one node it needs a ReadWriteMany class (`global.storage.storageClass.rwx`). `s3`: an S3-compatible bucket, recommended for production. See [Media storage](docs/storage.md) |
 | `s3.existingSecret` | `""` | **Required** with `storage: s3`: Secret in the CiviDash namespace with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` |
 | `s3.endpoint` / `s3.bucket` | `""` | **Required** with `storage: s3` |
-| `s3.publicUrl` | `""` | **Required key** with `storage: s3`; empty serves media through the dashboard under `/storage` |
+| `s3.publicUrl` | `""` | Empty serves media through the dashboard under `/storage`; a bucket URL makes browsers load media from the bucket, which needs anonymous read |
 | `s3.region` / `s3.usePathStyle` | `us-east-1` / `true` | Path-style URLs suit MinIO and most self-hosted S3 |
 | `rawValues` | — | Chart values merged last, e.g. `seed.*` ([Initial config data](docs/seed.md)), `resources.*` or `ingress.annotations` |
 
@@ -128,7 +128,8 @@ Profile `production` runs `cividash-fpm`, `cividash-web` and
   maintained in the admin area or imported. How an add-on's own Keycloak
   client gets access to platform datasets is still open on the CORE side.
 - **Admin login through Keycloak:** CORE 2 requires PKCE for confidential
-  clients. Keycloak login works once the CiviDash release in
+  clients. The client `cividash` is registered, but the login button stays
+  off (`keycloak.enabled: false`) until the CiviDash release in
   [`images.yaml`](images.yaml) sends PKCE; until then admins sign in with a
   CiviDash account.
 

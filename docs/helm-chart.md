@@ -88,9 +88,10 @@ existing value on later runs.
 
 When migrating an existing installation, create the Secret with the old key
 before the first deployment, so the generator keeps it. The secrets
-component manages the Secret with its Helm release `secrets-generator`, so
-give it that release's ownership metadata; otherwise Helm refuses to take
-over a Secret it did not create:
+component manages the Secret with its own Helm release
+`secrets-cividash-app-key` in the CiviDash namespace, so give it that
+release's ownership metadata; otherwise Helm refuses to take over a Secret
+it did not create:
 
 ```bash
 kubectl create namespace <instanceSlug>-cividash   # if it does not exist yet
@@ -99,8 +100,8 @@ kubectl -n <instanceSlug>-cividash create secret generic cividash-app-key \
 kubectl -n <instanceSlug>-cividash label secret cividash-app-key \
   app.kubernetes.io/managed-by=Helm
 kubectl -n <instanceSlug>-cividash annotate secret cividash-app-key \
-  meta.helm.sh/release-name=secrets-generator \
-  meta.helm.sh/release-namespace=<instanceSlug>-secrets
+  meta.helm.sh/release-name=secrets-cividash-app-key \
+  meta.helm.sh/release-namespace=<instanceSlug>-cividash
 ```
 
 Laravel accepts a 32-character raw key or `base64:` followed by 32 encoded
@@ -172,6 +173,10 @@ image's system CAs and that CA (key `ca.crt`) into one bundle, and the
 ConfigMap `cividash-platform-ca` points PHP's curl and openssl at it. Outbound
 HTTPS calls, such as the Keycloak token exchange, then trust the platform's
 certificates. With any other issuer the pods use the image's system CAs only.
+
+The bundle is built at pod start. After the platform CA rotates, restart the
+deployments (`kubectl -n <instanceSlug>-cividash rollout restart deployment`)
+so they pick up the new CA.
 
 ## Workloads
 

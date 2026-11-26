@@ -5,9 +5,8 @@ Commands below assume the default namespace `<instanceSlug>-cividash`.
 ## Render fails with a `cividash.cividash.*` message
 
 The add-on's values check the environment while rendering. With
-`storage: s3`, `s3.existingSecret`, `s3.endpoint`, `s3.bucket` and
-`s3.publicUrl` must be set (`publicUrl` may be empty), and `storage` must be
-`s3` or `volume`. The message names the missing or invalid key.
+`storage: s3`, `s3.existingSecret`, `s3.endpoint` and `s3.bucket` must be
+set; `s3.publicUrl` is optional. `storage` must be `s3` or `volume`. The message names the missing or invalid key.
 
 ## Hook Job or pods stuck in `CreateContainerConfigError`
 

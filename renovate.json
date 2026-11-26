@@ -44,6 +44,20 @@
         "ghcr.io/jandaroscher/cividash-web"
       ],
       "groupName": "CiviDash add-on images"
+    },
+    {
+      "description": "'civitas-' tags are moving build tags, not versions.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "jandaroscher/cividash-app",
+        "jandaroscher/cividash-web",
+        "ghcr.io/jandaroscher/cividash-app",
+        "ghcr.io/jandaroscher/cividash-web"
+      ],
+      "matchCurrentValue": "/^civitas-/",
+      "enabled": false
     }
   ]
 }

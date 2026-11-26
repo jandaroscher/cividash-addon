@@ -3,7 +3,7 @@
 {{- $global := .Values.global }}
 # Checklist:
 # - [x] Resources (requests and limits, chart defaults)
-# - [x] Larger Storage (S3 by default)
+# - [x] Larger Storage (S3 recommended, see README)
 # - [x] 2+ Replicas (the scheduler runs once, see policy-exceptions.yaml)
 # - [x] Rolling updates `maxUnavailable: 0`, `maxSurge: 1`
 # - [x] PodDisruptionBudget (at least `minAvailable: 1`)

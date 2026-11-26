@@ -70,13 +70,26 @@ not in the database, see [Media storage](storage.md#backup).
 
 ## Migrating from CIVITAS/CORE 1
 
-CORE 2 has no in-place upgrade. Before the first deployment, create the
-Secret `cividash-app-key` with the old `APP_KEY` (see
-[Helm chart, APP_KEY](helm-chart.md#app_key)). After the first deployment has
-created the empty `cividash` database, restore a dump of the old database
-into it as the role `cividash`, for example with
-`pg_restore --no-owner --role=cividash -d cividash`, then restart the
-CiviDash deployments. Sessions, cache and queue move with the database.
+CORE 2 has no in-place upgrade. Restore the old database before CiviDash
+runs for the first time, so its migration Job only updates the restored
+schema:
+
+1. Create the Secret `cividash-app-key` with the old `APP_KEY` (see
+   [Helm chart, APP_KEY](helm-chart.md#app_key)).
+2. Add `cividash` to the `components` list and deploy only the platform
+   parts that create the database and its credentials:
+   `--selector component=secrets --selector component=postgres`.
+3. Restore the dump of the old database into the empty `cividash` database
+   as the role `cividash`:
+
+   ```bash
+   kubectl -n <instanceSlug>-postgres exec -i postgres-cluster-1 -c postgres -- \
+     pg_restore --no-owner --role=cividash -d cividash < cividash.dump
+   ```
+
+4. Deploy the rest, including `--selector component=cividash`.
+
+Sessions, cache and queue move with the database.
 
 ## Uninstall
 
